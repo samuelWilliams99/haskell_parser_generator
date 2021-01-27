@@ -1,0 +1,121 @@
+{
+-- Need to modify the generic scanner to account for this kind of scanning, with weird tokens like %this and embedded code in another language { like this }
+
+import Grammar
+import Data.Maybe
+
+unpackCustom :: TokenType -> String
+unpackCustom (TokenCustom _ str) = str
+unpackCustom _ = ""
+
+nonCurly :: Parser String
+nonCurly = do
+    c <- item
+    if (c == '}') || (c == '{') then
+        empty
+    else
+        return [c]
+
+nonCurlyStr :: Parser String
+nonCurlyStr = fmap concat $ many $ formattedStringRaw <|> nonCurly
+
+innerCodeBlock :: Parser String
+innerCodeBlock = fmap unpackCustom (codeBlock True) <|> return ""
+
+codeBlockAux :: Parser String
+codeBlockAux = do
+    preStr <- nonCurlyStr
+    innerBlock <- innerCodeBlock
+    let out = preStr ++ innerBlock
+    if out == "" then empty else return out
+
+withBraces :: Bool -> String -> String
+withBraces True str = "{" ++ str ++ "}"
+withBraces False str = str
+
+codeBlock :: Bool -> Parser TokenType
+codeBlock includeBraces = do
+    char '{'
+    str <- fmap concat $ many codeBlockAux
+    postStr <- nonCurlyStr
+    char '}'
+
+    return $ TokenCustom "CodeBlock" $ withBraces includeBraces $ str ++ postStr
+
+directive :: Parser TokenType
+directive = do
+    char '%'
+    str <- ident
+    return $ TokenCustom "Directive" str
+
+extraParser :: Parser TokenType
+extraParser = codeBlock False <|> directive
+}
+
+%operators "::" "|" "*" "+" "?"
+%linecomments "#"
+%blockcomments "#[" "]#"
+%separateidentitycase
+%parsermap { (extraParser:) }
+
+%token
+      left          { TokenCustom "Directive" "left" }
+      right         { TokenCustom "Directive" "right" }
+      nonAssoc      { TokenCustom "Directive" "nonassoc" }
+      prec          { TokenCustom "Directive" "prec" }
+      token         { TokenCustom "Directive" "token" }
+      operators     { TokenCustom "Directive" "operators" }
+      keywords      { TokenCustom "Directive" "keywords" }
+      lineComments  { TokenCustom "Directive" "linecomments" }
+      blockComments { TokenCustom "Directive" "blockcomments" }
+      separateIden  { TokenCustom "Directive" "separateidentitycase" }
+      keepSpaces    { TokenCustom "Directive" "keepwhitespaces" }
+      keepComments  { TokenCustom "Directive" "keepcomments" }
+      parserMap     { TokenCustom "Directive" "parsermap" }
+      empty         { TokenCustom "Directive" "empty" }
+      codeBlock     { TokenCustom "CodeBlock" $$ }
+
+FullDef :: codeBlock? ScannerDef* Grammar                { (fromMaybe "" v1, v2, v3) }
+
+Grammar :: TokenDefs PrecDef* Rule+                      { Grammar v1 v2 v3 }
+
+ScannerDef :: operators stringLit+                       { ("ops", v2) }
+            | keywords stringLit+                        { ("kwds", v2) }
+            | lineComments stringLit                     { ("line", [v2]) }
+            | blockComments stringLit stringLit          { ("block", [v2, v3]) }
+            | separateIden                               { ("sepiden", []) }
+            | keepSpaces                                 { ("keepspace", []) }
+            | keepComments                               { ("keepcmts", []) }
+            | parserMap codeBlock                        { ("parser", [v2]) }
+
+TokenDefs :: token TokenMapping+                         { v2 }
+
+TokenMapping :: identifier codeBlock                     { TokenDef v1 v2 }
+              | stringLit codeBlock                      { TokenDef v1 v2 }
+
+PrecDef :: Prec Token+                                   { PrecLevel v1 v2 }
+
+Token :: stringLit                                       { v1 }
+       | identifier                                      { v1 }
+
+Prec :: left                                             { LeftAssoc }
+      | right                                            { RightAssoc }
+      | nonAssoc                                         { NonAssoc }
+
+Rule :: upperIdentifier '::' RuleDef+('|')               { Rule v1 v3 }
+
+RuleDef :: empty codeBlock                               { RuleProduction [] v2 Nothing }
+         | RuleToken+ codeBlock                          { RuleProduction v1 v2 Nothing }
+         | RuleToken+ prec stringLit codeBlock           { RuleProduction v1 v4 $ Just v3 }
+         | RuleToken+ prec identifier codeBlock          { RuleProduction v1 v4 $ Just v3 }
+
+RuleToken :: RuleTokenType                               { RuleToken v1 RuleTokenModifierNormal }
+           | RuleTokenType '+' ModSeperator?             { RuleToken v1 $ RuleTokenModifierSome v3 }
+           | RuleTokenType '*' ModSeperator?             { RuleToken v1 $ RuleTokenModifierMany v3 }
+           | RuleTokenType '?'                           { RuleToken v1 RuleTokenModifierOptional }
+
+ModSeperator :: "(" RuleTokenType ")"                    { v2 }
+
+RuleTokenType :: upperIdentifier                         { RuleNonTerminal v1 }
+               | stringLit                               { RuleTerminal v1 }
+               | identifier                              { RuleTerminal v1 }
