@@ -1,8 +1,9 @@
 module Grammar where
 
-import Data.HashMap.Strict
+import Data.HashMap.Strict hiding (map)
 import Data.Hashable
 import Data.List
+import Data.Char
 
 data Grammar = Grammar { tokenDefs :: [TokenDef]
                        , precLevels :: [PrecLevel]
@@ -99,7 +100,7 @@ addScannerSpecTokens spec gmr = gmr{ tokenDefs=nub $ tokenDefs gmr ++ makeTokens
   where
     ops = specOperators spec
     kwds = specKeywords spec
-    makeTokens prefix = fmap $ \x -> TokenDef x $ prefix ++ show x
+    makeTokens prefix = fmap $ \x -> TokenDef (map toLower x) $ prefix ++ show x
     defaultTokens = [ TokenDef "(" "TokenOpenParen"
                     , TokenDef ")" "TokenCloseParen"
                     , TokenDef "[" "TokenOpenSquare"

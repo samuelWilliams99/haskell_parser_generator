@@ -77,7 +77,7 @@ extraParser = codeBlock False <|> directive
 
 FullDef :: codeBlock? ScannerDef* Grammar                { (fromMaybe "" v1, v2, v3) }
 
-Grammar :: TokenDefs PrecDef* Rule+                      { Grammar v1 v2 v3 }
+Grammar :: TokenDefs? PrecDef* Rule+                     { Grammar (fromMaybe [] v1) v2 v3 }
 
 ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | keywords stringLit+                        { ("kwds", v2) }
