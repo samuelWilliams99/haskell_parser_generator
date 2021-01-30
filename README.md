@@ -6,12 +6,17 @@ This project must be run on a `gmr` file, in the format specified [here](#gmr-fo
 ### Compiled
 The compiled script can be run taking one argument, the path to the `gmr` file. A `hs` file of the same name will be generated in the same place as the `gmr` file.
 `./parsergenerator "myParser.gmr"`
+
 ### Interpreted
 The following functions have been defined in the `ParserGenerator` module.
 - `runParserGenerator :: String -> IO ()` taking path and building the `hs` file
-- `generattorParser :: String -> String -> Result String`, turning a gmr file contents and module name into the parser code
+- `generateParser :: String -> String -> Result String`, turning a `gmr` file contents and module name into the parser code
 
-## GMR format
+### Generated file
+The output file of this parser generator exports a `runParser` function, and the `Result` module. The type signature is as follows:
+`runParser :: String -> Result output` where output is the type of the first rule's reduction.
+
+## gmr format
 ### Prelim info
 The following types are used in the `gmr` file:
 - CodeBlock - A curly bracket enclosed section of haskell code, as follows:
@@ -24,10 +29,10 @@ The following types are used in the `gmr` file:
   `{ x + 2 }`
 - Directive - A lowercase string prefixed by a `%`, such as `%token`, `%left`, `%empty`.
 - Strings - These are enclosed by single or double quotes, they have no distinction.
-- Comments - Single line comments in gmr files look like `# this`. Multiline comments `#[ look like this ]#`
+- Comments - Single line comments in `gmr` files look like `# this`. Multiline comments `#[ look like this ]#`
 
 ### Overall structure
-The structure of the gmr file is as follows, with each section explained further down
+The structure of the `gmr` file is as follows, with each section explained further down
 1. Optional CodeBlock - Placed directly at the start of the generated file
 2. [Scanner specification](#scanner-specificiation) - List of scanner directives (can be 0) such as `%operators "+" "-"`.
 3. [Optional Token patterns](#token-patterns) - Map from terminal names to haskell patterns to match. Used for custom terminals when using the `%extraparser` directive with `TokenCustom`
@@ -43,7 +48,8 @@ This is a list of directives defining behaviours of the scanner.
 - `%separateidentitycase` - Flag that causes camelCase and PaskalCase identifiers to be recognised separately.
 - `%keepwhitespaces` - Flag that causes the scanner to include whitespace tokens.
 - `%keepcomments` - Flag that causes the scanner to include comment tokens, separate for single line and block comments.
-- `%parsermap` - This can be used to modify the monadic parser stack used by the scanner. Expects a function of type `[Parser TokenType] -> [Parser TokenType]`. More information on how to do this [here](#using-parsermap)
+- `%parsermap` - This can be used to modify the monadic parser stack used by the scanner.  
+  Expects a function of type `[Parser TokenType] -> [Parser TokenType]`. More information on how to do this [here](#using-parsermap)
 
 ### Token Patterns
 This defines any extra terminals you wish to use in your grammar. All standard terminals are already defined for you, and are listed at the end of this section.  
@@ -81,13 +87,48 @@ A simple precedence example is as follows:
 ```
 
 ### Rules
-TODO
+A `gmr` file requires at least one Rule, defined in the following format:
+```
+MyRule :: token1 token2 ... tokenN { reductionHaskellCode }
+        | token1				   { reductionHaskellCode2 }
+```
+Each rule defines 1 or more productions with respective reduction code, separated by pipes. When a production is matched, it will be replaced with the code in the CodeBlock after it, therefore all CodeBlocks for a given rule must have the same type.  
+Each token in the rule will be assigned to `v1, v2, ... vN` in the CodeBlock, for example:
+```
+# v1 will be the result of the first ExprPrimary, v2 will be a TokenOperator "*", and v3 will be the second ExprPrimary
+Expr :: ExprPrimary '*' ExprPrimary { ( v1, v2, v3 ) }
+```
+A rule token is defined as a terminal or nonterminal, followed by an optional modifier. A terminal can be either a lower case identifier, or a string literal.  
+A nonterminal, or rule, is defined as a PaskelCase identifier.  
+There are 3 modifiers supported:
+- `?` - this modifier makes a token optional, changing the vN type from `a` to `Maybe a`
+  ```
+  # Simple assignment production with optional type
+  MyRule :: identifier? identifier '=' Expr { assignment{ type=(fromMaybe "Int" v1), name=v2, val=v4 } }
+  ```
+- `*`, this modifier matches 0 or more of a token, change the type from `a` to `[a]`.
+- `+`, this modifier is the same as `*`, but matches 1 or more of a token.
+Both `*` and `+` support a separator token, by following the modifier by a token in brackets. This token can be a terminal or non terminal, but the values of this will be lost.
+```
+# An array production matching a list of Expr's seperated by commas
+Array :: "[" Expr*(",") "]" { array{ vals=v2 } }
+```
+  
+The precedence/associativity of a rule is copied from the last terminal in the production, as specified [here](#precedence-and-associativity).  
+If you wish for the rule to take the precedence of a different token, you can use the `%prec` directive at the end of the tokens, but before the CodeBlock, followed by the token to copy from.
+```
+# This rule will copy the precedence and assocativity of the "*" terminal, rather than the "+".
+# Note that the "*" terminal is not part of this production.
+MyRule :: identifier "+" OtherRule %prec "*" { ( v1, v2 ) }
+```
+  
+The first rule in the list will be the top of the syntax tree.
 
 ## Extra notes
 ### Result type
 [This file](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/result.hs) defines the `Result` data type, which is very similar to the `Maybe` type, but includes an error string in the failure constructor. It contains identical instances for `Functor`, `Applicative` and `Monad`
 
-### GMR Parser
+### gmr Parser
 The parser for this parser generator was generated by itself, and it's full definition is found in [cfgparser.gmr](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/cfgparser.gmr)
 
 ### Using ParserMap
@@ -101,5 +142,6 @@ The parser map works by modifying a list of `TokenType` `Parsers`, the default d
 7. Identifiers
 8. Int literals
 9. Float literals
-Since these Parsers are all expected to return a TokenType, there is a `TokenCustom String String` constructor in TokenType. It is expected that the first string is a type, and the second is data. This is used for the GMR parser for CodeBlocks and Directives, where parsers for both these types were made, then simply consed to the parser list.  
+
+Since these Parsers are all expected to return a TokenType, there is a `TokenCustom String String` constructor in TokenType. It is expected that the first string is a type, and the second is data. This is used for the gmr parser for CodeBlocks and Directives, where parsers for both these types were made, then simply consed to the parser list.  
 For more information on `Parsers`, the [Parsing](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parsing.hs) module defines several examples, and was modified from the library discussed in [this video](https://www.youtube.com/watch?v=dDtZLm7HIJs&ab_channel=Computerphile), by Graham Hutton.  
