@@ -36,14 +36,14 @@ generateCode :: String -- ^ The generated modules name
              -> ScannerSpec -- ^ @ScannerSpec@ as defined in "Grammar"
              -> DFA -- ^ @DFA@ as defined in "DFA"
              -> String -- ^ Outputted parser haskell code
-generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
+generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm ts) =
     concat [ generateModuleDef name exports, "\n\n"
            , imports, "\n"
            , unindent preCode, "\n\n"
            , generateScannerCode scannerSpec, "\n\n"
            , startCode, "\n\n"
            , generateStatesList $ length ss, "\n\n"
-           , generateAbsSynDataType ps, "\n\n"
+           , generateAbsSynDataType ps ts, "\n\n"
            , generateStatesCode ss ps tm
            , generateReductions ps tm]
 
@@ -99,12 +99,13 @@ generateStatesList :: Int -> String
 generateStatesList n = "generatedStates = [" ++ intercalate ", " ["generatedState" ++ (show n') | n' <- [0..n - 1]] ++ "]"
 
 -- Create the state output data type
-generateAbsSynDataType :: [DFAProduction] -> String
-generateAbsSynDataType ps = "data AbsSynToken" ++ (concat $ fmap (" t"++) absSynNs) ++ " = AbsSynToken Token" ++
-    (concat $ fmap (\x -> " | AbsSynResult" ++ x ++ " t" ++ x ++ " ParseState") absSynNs)
+generateAbsSynDataType :: [DFAProduction] -> [Maybe String] -> String
+generateAbsSynDataType ps ts = "data AbsSynToken" ++ typeParams ++ " = AbsSynToken Token" ++ constructors
   where
+    typeParams = (concat $ fmap (\(mt, n) -> if isJust mt then "" else " t" ++ n ) types)
+    constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " " ++ fromMaybe ('t':n) mt ++ " ParseState") types
     nonTerminalCount = length $ getNonTerminals ps
-    absSynNs = fmap show [1..nonTerminalCount-1]
+    types = zip (fmap (fmap trim) ts) $ fmap show [1..nonTerminalCount-1]
 
 -- Call and concat generateStateCode on each state, retaining index
 generateStatesCode :: [DFAState] -> [DFAProduction] -> TokenMap -> String

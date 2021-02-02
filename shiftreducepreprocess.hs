@@ -30,11 +30,13 @@ import Control.Lens
 handleModifiers :: Grammar -> Grammar
 handleModifiers gmr = gmr{ rules=nub $ concat newRules }
   where
-    newRules = Prelude.map handleRuleModifiers $ rules gmr
+    typeMap = fromList $ fmap (\r -> (ruleName r, ruleResultType r)) $ rules gmr
+    newRules = Prelude.map (handleRuleModifiers typeMap) $ rules gmr
 
 -- Call handleProductionModifiers on each production of a rule
-handleRuleModifiers :: Rule -> [Rule]
-handleRuleModifiers rule = (rule{ ruleProductions=concat prods }):(concat newRules)
+handleRuleModifiers :: HashMap String (Maybe String) -> Rule -> [Rule]
+handleRuleModifiers typeMap rule = (rule{ ruleProductions=concat prods }):(concat newRules)
+-- TODO: Do something with typeMap, need to be able to derive the types of generated productions
   where
     prodRulePairs = Prelude.map handleProductionModifiers $ ruleProductions rule
     (prods, newRules) = unzip prodRulePairs
@@ -42,7 +44,7 @@ handleRuleModifiers rule = (rule{ ruleProductions=concat prods }):(concat newRul
 -- Rule builders for token modifiers
 
 makeSomeRule :: RuleToken -> Maybe RuleTokenType -> Rule
-makeSomeRule token@(RuleToken tType _) sep = Rule{ -- Add Sep to tokens of first production and make v2 -> v3 if sep isnt Nothing
+makeSomeRule token@(RuleToken tType _) sep = Rule{
     ruleName=someRuleName,
     ruleProductions=[
         RuleProduction{
@@ -59,7 +61,9 @@ makeSomeRule token@(RuleToken tType _) sep = Rule{ -- Add Sep to tokens of first
             productionResult="[v1]",
             productionPrecToken=Nothing
         }
-    ]}
+    ],
+    ruleResultType=Nothing
+    }
   where
     someRuleName = concat ["+", getSepStr sep, tokenName]
     tokenName = getTokenStr token
@@ -76,7 +80,9 @@ makeJustRule token@(RuleToken tType _) = Rule{
             productionResult="Just v1",
             productionPrecToken=Nothing
         }
-    ]}
+    ],
+    ruleResultType=Nothing
+    }
   where
     tokenName = getTokenStr token
     normalToken = RuleToken tType RuleTokenModifierNormal
@@ -90,7 +96,9 @@ makeEmptyRule token = Rule{
             productionResult="empty",
             productionPrecToken=Nothing
         }
-    ]}
+    ],
+    ruleResultType=Nothing
+    }
   where
     tokenName = getTokenStr token
 
@@ -116,7 +124,7 @@ handleProductionModifiers prod@(RuleProduction (x:xs) _ _) =
 
 -- | Builds a @HashMap@ from a list of @TokenDef@s, erroring on multiple definitions and invalid patterns
 makeTokenMap :: [TokenDef] -> Result TokenMap
-makeTokenMap [] = return $ singleton "%EOF" $ TokenDef "%EOF" "TokenEOF"
+makeTokenMap [] = return $ singleton "%EOF" $ TokenDef "%EOF" "TokenEOF" Nothing
 makeTokenMap (t:ts) = do
     rest <- makeTokenMap ts
 
@@ -165,14 +173,14 @@ ruleNonTerminalCheck r rs = do
         otherwise -> Error $ "Multiple definitions of rule " ++ r
 
 -- | Converts rules into a list of @DFAProduction@s, checking all tokens within the rule are valid, and assigning the correct precedences.
-makeProductions :: [Rule] -> [Rule] -> TokenMap -> PrecMap -> Result [DFAProduction]
-makeProductions [] _ _ _ = return []
+makeProductions :: [Rule] -> [Rule] -> TokenMap -> PrecMap -> Result ([DFAProduction], [Maybe String])
+makeProductions [] _ _ _ = return ([], [])
 makeProductions (r:rs) rs' tm pm = do
-    rest <- makeProductions rs rs' tm pm
+    (rest, ts') <- makeProductions rs rs' tm pm
 
     productions <- fmap concat $ mapM productionsFromRule $ ruleProductions r
 
-    return $ productions ++ rest
+    return $ (productions ++ rest, (ruleResultType r):ts') -- TODO: this isnt correct, there will be more productions than result types
   where
     productionsFromRule p = do
         tokens <- getTokens $ productionTokens p

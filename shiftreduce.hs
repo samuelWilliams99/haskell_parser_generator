@@ -40,13 +40,13 @@ generateDFA g = do
     let (Grammar ts ps rs) = handleModifiers g
     tokenMap <- makeTokenMap ts
     precMap <- makePrecMap ps tokenMap
-    prods <- makeProductions rs rs tokenMap precMap
+    (prods, resultTypes) <- makeProductions rs rs tokenMap precMap
 
     let prods' = (DFAProduction "START" [RuleNonTerminal $ prods^._head.dfaProductionName, RuleTerminal "%EOF"] "" Nothing):prods
 
     let followMap = makeFollowMap prods' tokenMap
 
-    makeStateMachine $ DFA [] prods' tokenMap precMap followMap
+    makeStateMachine $ DFA [] prods' tokenMap precMap followMap resultTypes
 
 makeStateMachine :: DFA -> Result DFA
 makeStateMachine dfa = fmap snd $ runStateT makeStateMachineAux dfa

@@ -25,6 +25,7 @@ data Grammar = Grammar { tokenDefs :: [TokenDef] -- ^ All tokens definitions for
 -- | Direct output from parser of token definitions, to be translated to a map.
 data TokenDef = TokenDef { tokenName :: String -- ^ Name used in rules
                          , tokenPattern :: String -- ^ Haskell pattern to match in generated code
+                         , tokenPatternType :: Maybe String -- ^ Optional haskell type of token
                          } deriving (Show)
 
 -- | Hashing based only on name
@@ -46,6 +47,7 @@ data PrecLevel = PrecLevel { levelAssociativity :: Associativity
 -- | Grammar Rule as a list of productions for a non terminal
 data Rule = Rule { ruleName :: String -- ^ Name of non terminal
                  , ruleProductions :: [RuleProduction]
+                 , ruleResultType :: Maybe String
                  } deriving Show
 
 -- | Equality based only the name
@@ -125,18 +127,18 @@ addScannerSpecTokens spec gmr = gmr{ tokenDefs=nub $ tokenDefs gmr ++ makeTokens
   where
     ops = specOperators spec
     kwds = specKeywords spec
-    makeTokens prefix = fmap $ \x -> TokenDef (map toLower x) $ prefix ++ show x
-    defaultTokens = [ TokenDef "(" "TokenOpenParen"
-                    , TokenDef ")" "TokenCloseParen"
-                    , TokenDef "[" "TokenOpenSquare"
-                    , TokenDef "]" "TokenCloseSquare"
-                    , TokenDef "{" "TokenOpenCurly"
-                    , TokenDef "}" "TokenCloseCurly"
-                    , TokenDef "identifier" "TokenIdentifier $$"
-                    , TokenDef "upperIdentifier" "TokenUpperIdentifier $$"
-                    , TokenDef "stringLit" "TokenStringLit $$"
-                    , TokenDef "integerLit" "TokenIntLit $$"
-                    , TokenDef "floatLit" "TokenFloatLit $$"
-                    , TokenDef "blockComment" "TokenBlockComment $$"
-                    , TokenDef "lineComment" "TokenLineComment $$"
-                    , TokenDef "whitespace" "TokenWhitespace $$" ]
+    makeTokens prefix = fmap $ \x -> TokenDef (map toLower x) (prefix ++ show x) (Just "String")
+    defaultTokens = [ TokenDef "(" "TokenOpenParen" (Just "TokenType")
+                    , TokenDef ")" "TokenCloseParen" (Just "TokenType")
+                    , TokenDef "[" "TokenOpenSquare" (Just "TokenType")
+                    , TokenDef "]" "TokenCloseSquare" (Just "TokenType")
+                    , TokenDef "{" "TokenOpenCurly" (Just "TokenType")
+                    , TokenDef "}" "TokenCloseCurly" (Just "TokenType")
+                    , TokenDef "identifier" "TokenIdentifier $$" (Just "String")
+                    , TokenDef "upperIdentifier" "TokenUpperIdentifier $$" (Just "String")
+                    , TokenDef "stringLit" "TokenStringLit $$" (Just "String")
+                    , TokenDef "integerLit" "TokenIntLit $$" (Just "Int")
+                    , TokenDef "floatLit" "TokenFloatLit $$" (Just "Float")
+                    , TokenDef "blockComment" "TokenBlockComment $$" (Just "String")
+                    , TokenDef "lineComment" "TokenLineComment $$" (Just "String")
+                    , TokenDef "whitespace" "TokenWhitespace $$" (Just "Char")]

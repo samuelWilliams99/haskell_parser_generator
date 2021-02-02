@@ -23,6 +23,8 @@ data DFA = DFA{ _dfaStates :: [DFAState] -- ^ List of states, identified by thei
               , _dfaTokenMap :: TokenMap -- ^ Map from token name to token pattern
               , _dfaPrecMap :: PrecMap -- ^ Map from terminal to @Prec@
               , _dfaFollowMap :: FollowMap -- ^ Map from non terminal to list of terminals
+              , _dfaResultTypes :: [Maybe String] -- ^ List of result types for productions
+              -- TODO: Store above on the production itself
               } deriving Show
 
 -- | Combination of @Associativity@ and a precedence level index

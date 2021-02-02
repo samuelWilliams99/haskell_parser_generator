@@ -3,7 +3,7 @@ import Grammar
 import Data.Maybe
 }
 
-%operators "::" "|" "*" "+" "?"
+%operators "::" "|" "*" "+" "?" "=>"
 %linecomments "#"
 %blockcomments "#[" "]#"
 %separateidentitycase
@@ -29,12 +29,16 @@ import Data.Maybe
       codeBlock     { TokenCustom "CodeBlock" $$ }
 
 FullDef :: Export? PreCode? ScannerDef* Grammar          { (v1, fromMaybe "" v2, v3, v4) }
+                                                      => { (Maybe String, String, [(String, [String])], Grammar) }
 
 Export :: export codeBlock                               { v2 }
+                                                      => { String }
 
 PreCode :: precode codeBlock                             { v2 }
+                                                      => { String }
 
 Grammar :: TokenDefs? PrecDef* Rule+                     { Grammar (fromMaybe [] v1) v2 v3 }
+                                                      => { Grammar }
 
 ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | keywords stringLit+                        { ("kwds", v2) }
@@ -44,35 +48,49 @@ ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | keepSpaces                                 { ("keepspace", []) }
             | keepComments                               { ("keepcmts", []) }
             | parserMap codeBlock                        { ("parser", [v2]) }
+                                                      => { (String, [String]) }
 
 TokenDefs :: token TokenMapping+                         { v2 }
+                                                      => { [TokenDef] }
 
-TokenMapping :: identifier codeBlock                     { TokenDef v1 v2 }
-              | stringLit codeBlock                      { TokenDef v1 v2 }
+TypeDef :: '=>' codeBlock                                { v2 }
+                                                      => { String }
+
+TokenMapping :: identifier codeBlock TypeDef?            { TokenDef v1 v2 v3 }
+              | stringLit codeBlock TypeDef?             { TokenDef v1 v2 v3 }
+                                                      => { TokenDef }
 
 PrecDef :: Prec Token+                                   { PrecLevel v1 v2 }
+                                                      => { PrecLevel }
 
 Token :: stringLit                                       { v1 }
        | identifier                                      { v1 }
+                                                      => { String }
 
 Prec :: left                                             { LeftAssoc }
       | right                                            { RightAssoc }
       | nonAssoc                                         { NonAssoc }
+                                                      => { Associativity }
 
-Rule :: upperIdentifier '::' RuleDef+('|')               { Rule v1 v3 }
+Rule :: upperIdentifier '::' RuleDef+('|') TypeDef?      { Rule v1 v3 v4 }
+                                                      => { Rule }
 
 RuleDef :: empty codeBlock                               { RuleProduction [] v2 Nothing }
          | RuleToken+ codeBlock                          { RuleProduction v1 v2 Nothing }
          | RuleToken+ prec stringLit codeBlock           { RuleProduction v1 v4 $ Just v3 }
          | RuleToken+ prec identifier codeBlock          { RuleProduction v1 v4 $ Just v3 }
+                                                      => { RuleProduction }
 
 RuleToken :: RuleTokenType                               { RuleToken v1 RuleTokenModifierNormal }
            | RuleTokenType '+' ModSeperator?             { RuleToken v1 $ RuleTokenModifierSome v3 }
            | RuleTokenType '*' ModSeperator?             { RuleToken v1 $ RuleTokenModifierMany v3 }
            | RuleTokenType '?'                           { RuleToken v1 RuleTokenModifierOptional }
+                                                      => { RuleToken }
 
 ModSeperator :: "(" RuleTokenType ")"                    { v2 }
+                                                      => { RuleTokenType }
 
 RuleTokenType :: upperIdentifier                         { RuleNonTerminal v1 }
                | stringLit                               { RuleTerminal v1 }
                | identifier                              { RuleTerminal v1 }
+                                                      => { RuleTokenType }
