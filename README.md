@@ -102,7 +102,8 @@ Expr :: ExprPrimary '*' ExprPrimary { ( v1, v2, v3 ) }
 ```
 For any terminals in the rule definition, `psN` variable will be defined along-side `vN`, this will be the [ParseState](#parsestate-type) of that terminal, containing scanner information about where that token was in the original string.  
 ```
-# Note that ps1 and ps3 do not exist here, as Expr is a nonterminal, even if Expr simply reduced to a terminal
+# Note that ps1 and ps3 do not exist here, as Expr is a nonterminal.
+# This is the case even if Expr simply reduced to a terminal
 # psN vars only exist for immediate terminals in the rule
 MyRule :: Expr "+" Expr { ( v1, ( v2, ps2 ), v3 ) }
 ```
