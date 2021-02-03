@@ -95,7 +95,9 @@ MyRule :: token1 token2 ... tokenN { reductionHaskellCode }
 Each rule defines 1 or more productions with respective reduction code, separated by pipes. When a production is matched, it will be replaced with the code in the CodeBlock after it, therefore all CodeBlocks for a given rule must have the same type.  
 Each token in the rule will be assigned to `v1, v2, ... vN` in the CodeBlock, for example:
 ```
-# v1 will be the result of the first ExprPrimary, v2 will be a TokenOperator "*", and v3 will be the second ExprPrimary
+# v1 will be the result of the first ExprPrimary
+# v2 will be a TokenOperator "*"
+# v3 will be the second ExprPrimary
 Expr :: ExprPrimary '*' ExprPrimary { ( v1, v2, v3 ) }
 ```
 A rule token is defined as a terminal or nonterminal, followed by an optional modifier. A terminal can be either a lower case identifier, or a string literal.  
