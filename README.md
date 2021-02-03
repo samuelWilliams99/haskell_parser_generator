@@ -90,7 +90,7 @@ A simple precedence example is as follows:
 A `gmr` file requires at least one Rule, defined in the following format:
 ```
 MyRule :: token1 token2 ... tokenN { reductionHaskellCode }
-        | token1				   { reductionHaskellCode2 }
+        | token1                   { reductionHaskellCode2 }
 ```
 Each rule defines 1 or more productions with respective reduction code, separated by pipes. When a production is matched, it will be replaced with the code in the CodeBlock after it, therefore all CodeBlocks for a given rule must have the same type.  
 Each token in the rule will be assigned to `v1, v2, ... vN` in the CodeBlock, for example:
