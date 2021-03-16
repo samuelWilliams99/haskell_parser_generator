@@ -3,23 +3,14 @@
 
 import Grammar
 import Data.Maybe
-import CodeBlock
-
-directive :: Parser TokenType
-directive = do
-    char '%'
-    str <- ident
-    return $ TokenCustom "Directive" str
-
-extraParser :: Parser TokenType
-extraParser = codeBlock <|> directive
+import LanguageDefsParser
 }
 
 %operators "::" "|" "*" "+" "?"
 %linecomments "#"
 %blockcomments "#[" "]#"
 %separateidentitycase
-%parsermap { (extraParser:) }
+%parsermap { (languageDefsParser:) }
 
 %token
       left          { TokenCustom "Directive" "left" }

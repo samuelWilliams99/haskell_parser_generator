@@ -8,16 +8,7 @@ import ParseState
 
 import Grammar
 import Data.Maybe
-import CodeBlock
-
-directive :: Parser TokenType
-directive = do
-    char '%'
-    str <- ident
-    return $ TokenCustom "Directive" str
-
-extraParser :: Parser TokenType
-extraParser = codeBlock <|> directive
+import LanguageDefsParser
 
 gScanner = Scanner{ separateCasedIdentifiers=True
                   , ignoreWhitespace=True
@@ -27,7 +18,7 @@ gScanner = Scanner{ separateCasedIdentifiers=True
                   , lineComment=Just "#"
                   , blockComment=Just ("#[","]#")
                   , includeEOF=True
-                  , parserMap=(extraParser:)
+                  , parserMap=(languageDefsParser:)
                   }
 
 runParser str = do

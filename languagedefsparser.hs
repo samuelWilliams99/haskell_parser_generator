@@ -1,4 +1,4 @@
-module CodeBlock where
+module LanguageDefsParser (languageDefsParser) where
 
 import Grammar
 import Data.Maybe
@@ -21,7 +21,7 @@ nonCurlyStr :: Parser String
 nonCurlyStr = fmap concat $ many $ formattedStringRaw <|> nonCurly
 
 innerCodeBlock :: Parser String
-innerCodeBlock = fmap unpackCustom (codeBlock' True) <|> return ""
+innerCodeBlock = fmap unpackCustom (codeBlock True) <|> return ""
 
 codeBlockAux :: Parser String
 codeBlockAux = do
@@ -34,8 +34,8 @@ withBraces :: Bool -> String -> String
 withBraces True str = "{" ++ str ++ "}"
 withBraces False str = str
 
-codeBlock' :: Bool -> Parser TokenType
-codeBlock' includeBraces = do
+codeBlock :: Bool -> Parser TokenType
+codeBlock includeBraces = do
     char '{'
     str <- fmap concat $ many codeBlockAux
     postStr <- nonCurlyStr
@@ -43,5 +43,11 @@ codeBlock' includeBraces = do
 
     return $ TokenCustom "CodeBlock" $ withBraces includeBraces $ str ++ postStr
 
-codeBlock :: Parser TokenType
-codeBlock = codeBlock' False
+directive :: Parser TokenType
+directive = do
+    char '%'
+    str <- ident
+    return $ TokenCustom "Directive" str
+
+languageDefsParser :: Parser TokenType
+languageDefsParser = codeBlock False <|> directive
