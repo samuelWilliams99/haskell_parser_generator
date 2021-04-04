@@ -33,7 +33,11 @@ generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
            , generateReductions ps tm]
 
 generateModuleDef :: String -> Maybe String -> String
-generateModuleDef name mExports = "module " ++ name ++ " (runParser, module Result" ++ fromMaybe "" (fmap (", "++) mExports ) ++ ") where"
+generateModuleDef name mExports = "module " ++ name ++ " (runParser, module Result" ++ exports ++ ") where"
+  where
+    exports = case mExports of
+                  Nothing -> ""
+                  Just e  -> ", " ++ trim e
 
 imports :: String
 imports = "import Scanner\nimport Parsing\nimport Result\nimport ParseState"
