@@ -1,6 +1,4 @@
-{
--- Need to modify the generic scanner to account for this kind of scanning, with weird tokens like %this and embedded code in another language { like this }
-
+%precode {
 import Grammar
 import Data.Maybe
 import LanguageDefsParser
@@ -19,6 +17,7 @@ import LanguageDefsParser
       prec          { TokenCustom "Directive" "prec" }
       token         { TokenCustom "Directive" "token" }
       export        { TokenCustom "Directive" "export" }
+      precode       { TokenCustom "Directive" "precode" }
       operators     { TokenCustom "Directive" "operators" }
       keywords      { TokenCustom "Directive" "keywords" }
       lineComments  { TokenCustom "Directive" "linecomments" }
@@ -30,10 +29,11 @@ import LanguageDefsParser
       empty         { TokenCustom "Directive" "empty" }
       codeBlock     { TokenCustom "CodeBlock" $$ }
 
-FullDef :: Exports codeBlock? ScannerDef* Grammar        { (v1, fromMaybe "" v2, v3, v4) }
+FullDef :: Export? PreCode? ScannerDef* Grammar          { (v1, fromMaybe "" v2, v3, v4) }
 
-Exports :: export codeBlock                              { Just v2 }
-         | %empty                                        { Nothing }
+Export :: export codeBlock                               { v2 }
+
+PreCode :: precode codeBlock                             { v2 }
 
 Grammar :: TokenDefs? PrecDef* Rule+                     { Grammar (fromMaybe [] v1) v2 v3 }
 
