@@ -77,12 +77,24 @@ getPrec (DFAShift _) t = do
 getPrec (DFAReduce i) _ = use $ dfaProductions.(elementF i).dfaProductionPrec
 
 -- Compare two precs, return if left takes priority, fail if unknown
-precCompare :: Prec -> Prec -> Result Bool
-precCompare (Prec assoc p) (Prec _ p') = if p > p' then return True
-    else if p < p' then return False
-    else if assoc == LeftAssoc then return False
-    else if assoc == RightAssoc then return True
-    else Error "Shift reduce error"
+precCompare :: Prec -> Prec -> Maybe Bool
+precCompare (Prec assoc p) (Prec _ p') = if p > p' then Just True
+    else if p < p' then Just False
+    else if assoc == LeftAssoc then Just False
+    else if assoc == RightAssoc then Just True
+    else Nothing
+
+maybeError :: String -> Maybe a -> Result a
+maybeError e Nothing = Error e
+maybeError _ (Just a) = Result a
+
+getReduceIndex :: DFAAction -> DFAAction -> Int
+getReduceIndex (DFAReduce n) _ = n
+getReduceIndex _ (DFAReduce n) = n
+
+getShiftIndex :: DFAAction -> DFAAction -> Int
+getShiftIndex (DFAShift n) _ = n
+getShiftIndex _ (DFAShift n) = n
 
 -- Combine 2 lists of actions, looking for clashes on read tokens.
 -- On clash, deal with conflicts either by erroring or picking the correct one using precedence and associativity
@@ -100,14 +112,20 @@ combineActions xs (y@(yt, ya):ys) = case findIndex ((==yt) . fst) xs of
         else if isShift xa /= isShift ya then do
             xPrec <- getPrec xa yt
             yPrec <- getPrec ya yt
+            prods <- use dfaProductions
             if isJust xPrec && isJust yPrec then do
-                leftBigger <- lift $ precCompare (fromJust xPrec) (fromJust yPrec)
+                let err = "Shift reduce error between " ++ show xa ++ " and " ++ show ya ++ " on " ++ show yt
+                leftBigger <- lift $ maybeError err $ precCompare (fromJust xPrec) (fromJust yPrec)
                 if leftBigger then
                     combineActions xs ys
                 else
                     fmap (y:) $ combineActions (deleteAt i xs) ys
-            else
-                lift $ Error $ "Unrecoverable shift-reduce error between " ++ show xa ++ " and " ++ show ya ++ ". This can be solved using %prec on the rule or precedence definitions for the tokens."
+            else do
+                states <- use dfaStates
+                lift $ Error $ "Unrecoverable shift-reduce error between " ++ show xa ++ " and " ++ show ya ++ " on " ++ show yt ++
+                               ". This can be solved using %prec on the rule or precedence definitions for the tokens.\n\n" ++
+                               (show $ prods !! (getReduceIndex xa ya)) ++ "\n\n" ++
+                               (show $ states !! (getShiftIndex xa ya))
         else
             lift $ Error $ "Reduce-reduce error between " ++ show xa ++ " and " ++ show ya
 

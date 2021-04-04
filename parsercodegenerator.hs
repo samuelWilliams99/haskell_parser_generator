@@ -7,24 +7,33 @@ import Data.Char
 import Data.List
 import Data.Maybe
 import Data.List.Split
-import Data.HashMap.Strict as Map
+import Data.HashMap.Strict as Map hiding (map, filter)
 import Control.Lens
 
+reindent :: Int -> String -> String
+reindent n str = intercalate "\n" $ map (\line -> (replicate n ' ') ++ (drop minIndent line)) strLines
+  where
+    minIndent = minimum $ map (length . fst . span isSpace) $ strLines
+    strLines = filter ((>0) . length . trim) $ lines str
+
+unindent :: String -> String
+unindent = reindent 0
+
 -- Generate each section of code and concat together
-generateCode :: String -> String -> ScannerSpec -> DFA -> String
-generateCode name preCode scannerSpec (DFA ss' ps tm _ _) =
-    concat [ generateModuleDef name, "\n\n"
+generateCode :: String -> Maybe String -> String -> ScannerSpec -> DFA -> String
+generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
+    concat [ generateModuleDef name exports, "\n\n"
            , imports, "\n"
-           , trim preCode, "\n\n"
+           , unindent preCode, "\n\n"
            , generateScannerCode scannerSpec, "\n\n"
            , startCode, "\n\n"
-           , generateStatesList $ length ss', "\n\n"
+           , generateStatesList $ length ss, "\n\n"
            , generateAbsSynDataType ps, "\n\n"
-           , generateStatesCode ss' ps tm
+           , generateStatesCode ss ps tm
            , generateReductions ps tm]
 
-generateModuleDef :: String -> String
-generateModuleDef name = "module " ++ name ++ " (runParser, module Result) where"
+generateModuleDef :: String -> Maybe String -> String
+generateModuleDef name mExports = "module " ++ name ++ " (runParser, module Result" ++ fromMaybe "" (fmap (", "++) mExports ) ++ ") where"
 
 imports :: String
 imports = "import Scanner\nimport Parsing\nimport Result\nimport ParseState"
@@ -51,8 +60,8 @@ startCode =
     "runParser str = do\n\
     \    ts <- scan gScanner str\n\
     \    generatedState0 [] [] $ fmap AbsSynToken ts\n\n\
-    \generatedError [] = Error \"Ran out of tokens\"\n\
-    \generatedError ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos ps\n\n\
+    \generatedError n [] = Error \"Ran out of tokens\"\n\
+    \generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos ps\n\n\
     \unpackFinal (AbsSynResult1 x) = x"
 
 -- List of state functions
@@ -79,7 +88,7 @@ generateStateCode :: DFAState -> Int -> [DFAProduction] -> TokenMap -> String
 generateStateCode (DFAState _ as' ) n ps tm = aux as'
   where
     -- generatedStateX :: [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken
-    aux [] = "generatedState" ++ (show n) ++ " vs ss xs = generatedError xs"
+    aux [] = "generatedState" ++ (show n) ++ " vs ss xs = generatedError " ++ show n ++ " xs"
     aux ((t, a):as) = "generatedState" ++ (show n) ++ " vs ss (x@" ++ generateStatePattern ps tm t ++ ":xs) = "
         ++ generateStateAction n a ps ++ "\n"
         ++ aux as

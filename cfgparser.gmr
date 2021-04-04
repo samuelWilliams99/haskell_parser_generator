@@ -18,6 +18,7 @@ import LanguageDefsParser
       nonAssoc      { TokenCustom "Directive" "nonassoc" }
       prec          { TokenCustom "Directive" "prec" }
       token         { TokenCustom "Directive" "token" }
+      export        { TokenCustom "Directive" "export" }
       operators     { TokenCustom "Directive" "operators" }
       keywords      { TokenCustom "Directive" "keywords" }
       lineComments  { TokenCustom "Directive" "linecomments" }
@@ -29,7 +30,10 @@ import LanguageDefsParser
       empty         { TokenCustom "Directive" "empty" }
       codeBlock     { TokenCustom "CodeBlock" $$ }
 
-FullDef :: codeBlock? ScannerDef* Grammar                { (fromMaybe "" v1, v2, v3) }
+FullDef :: Exports codeBlock? ScannerDef* Grammar        { (v1, fromMaybe "" v2, v3, v4) }
+
+Exports :: export codeBlock                              { Just v2 }
+         | %empty                                        { Nothing }
 
 Grammar :: TokenDefs? PrecDef* Rule+                     { Grammar (fromMaybe [] v1) v2 v3 }
 

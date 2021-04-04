@@ -17,8 +17,9 @@ nonCurly = do
     else
         return [c]
 
+-- TODO: Deal with character literals correctly, also haskell allows `'` on end of names, so make that work
 nonCurlyStr :: Parser String
-nonCurlyStr = fmap concat $ many $ formattedStringRaw <|> nonCurly
+nonCurlyStr = fmap concat $ many $ (fmap (:[]) $ char '\'') <|> formattedStringRaw <|> nonCurly
 
 innerCodeBlock :: Parser String
 innerCodeBlock = fmap unpackCustom (codeBlock True) <|> return ""

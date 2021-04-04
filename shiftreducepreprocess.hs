@@ -215,7 +215,7 @@ addFollowers ps tm nt fm = if member nt fm then fm else
 addNextTerminals :: [RuleTokenType] -> [DFAProduction] -> TokenMap -> ([TokenDef], [RuleTokenType], Bool)
 addNextTerminals [] ps tm = ([], [], True)
 addNextTerminals ts@((RuleTerminal t):_) ps tm = ([tm ! t], ts, False)
-addNextTerminals ((RuleNonTerminal t):ts) ps tm = if dangling then (nub $ tds ++ tds', ts', True) else (tds, ts, False)
+addNextTerminals ((RuleNonTerminal t):ts) ps tm = if dangling then (nub $ tds ++ tds', ts', True) else (tds, (RuleNonTerminal t):ts, False)
   where
     (dangling, tds) = nextTerminals ps tm t
     (tds', ts', _) = addNextTerminals ts ps tm

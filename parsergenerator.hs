@@ -69,9 +69,9 @@ generateScannerSpec raw = generateScannerSpecAux raw scannerSpec
 -- Parse, build scanner spec and DFA, then generate code.
 generateParser :: String -> String -> Result String
 generateParser str name = do
-    (preCode, scannerSpecRaw, grammar) <- runParser str
+    (exports, preCode, scannerSpecRaw, grammar) <- runParser str
     scannerSpec <- generateScannerSpec scannerSpecRaw
 
     dfa <- generateDFA $ addScannerSpecTokens scannerSpec grammar
 
-    return $ generateCode name preCode scannerSpec dfa
+    return $ generateCode name exports preCode scannerSpec dfa
