@@ -1,16 +1,16 @@
-module ParserGenerator (runParserGenerator, generateParser, pathToModule, module Result) where
+module ParserGenerator (runParserGenerator, generateParser, pathToModule) where
 
 import System.IO
 import System.Directory
 import System.Environment
 import System.FilePath.Posix
-import Result
-import Scanner
 import Cfgparser
 import Grammar
 import ShiftReduce
 import DFA
 import ParserCodeGenerator
+import ParserRequirementsCode
+import ParserRequirements
 import Data.HashMap.Strict as Map
 import Data.Char
 
@@ -30,12 +30,14 @@ runParserGenerator path
             putStrLn ("No such file \"" ++ path ++ "\"")
         else do
             contents <- readFile path
-            case generateParser contents $ pathToModule path of
+            case generateParser' contents $ pathToModule path of
                 Error e -> putStrLn e
                 Result code -> do
-                    writeFile outPath code
+                    writeFile codeOutPath code
+                    writeFile reqsOutPath parserRequirements
                   where
-                    outPath = replaceExtension path "hs"
+                    codeOutPath = replaceExtension path "hs"
+                    reqsOutPath = replaceFileName path "parserrequirements.hs"
 
 -- Converts a full path to a module name : my/path/to/parser.hs -> Parser
 pathToModule :: String -> String
@@ -67,11 +69,16 @@ generateScannerSpec raw = generateScannerSpecAux raw scannerSpec
                 otherwise -> Error "Multiple extra parser definitions"
 
 -- Parse, build scanner spec and DFA, then generate code.
-generateParser :: String -> String -> Result String
-generateParser str name = do
+generateParser' :: String -> String -> Result String
+generateParser' str name = do
     (exports, preCode, scannerSpecRaw, grammar) <- runParser str
     scannerSpec <- generateScannerSpec scannerSpecRaw
 
     dfa <- generateDFA $ addScannerSpecTokens scannerSpec grammar
 
     return $ generateCode name exports preCode scannerSpec dfa
+
+generateParser :: String -> String -> Either String String
+generateParser str name = case generateParser' str name of
+    Error e -> Left e
+    Result c -> Right c

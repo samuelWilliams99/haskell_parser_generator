@@ -33,14 +33,14 @@ generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
            , generateReductions ps tm]
 
 generateModuleDef :: String -> Maybe String -> String
-generateModuleDef name mExports = "module " ++ name ++ " (runParser, module Result" ++ exports ++ ") where"
+generateModuleDef name mExports = "module " ++ name ++ " (runParser, module ParserRequirements" ++ exports ++ ") where"
   where
     exports = case mExports of
                   Nothing -> ""
                   Just e  -> ", " ++ trim e
 
 imports :: String
-imports = "import Scanner\nimport Parsing\nimport Result\nimport ParseState"
+imports = "import ParserRequirements\nimport Control.Applicative"
 
 trim = dropWhileEnd isSpace . dropWhile isSpace
 replace old new = intercalate new . splitOn old

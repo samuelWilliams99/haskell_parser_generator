@@ -2,7 +2,7 @@ module ShiftReduce (module ShiftReducePreProcess, generateDFA) where
 
 import DFA
 import Grammar
-import Result
+import ParserRequirements
 import ShiftReducePreProcess
 import Data.HashMap.Strict as Map hiding (foldr, filter)
 import Data.Maybe

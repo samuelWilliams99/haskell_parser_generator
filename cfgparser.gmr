@@ -1,7 +1,6 @@
 %precode {
 import Grammar
 import Data.Maybe
-import LanguageDefsParser
 }
 
 %operators "::" "|" "*" "+" "?"

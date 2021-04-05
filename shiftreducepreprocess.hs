@@ -7,7 +7,7 @@ module ShiftReducePreProcess ( handleModifiers
 
 import DFA
 import Grammar
-import Result
+import ParserRequirements
 import Data.HashMap.Strict as Map hiding (foldr, filter)
 import Data.Hashable
 import Data.Maybe

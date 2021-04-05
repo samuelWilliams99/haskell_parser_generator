@@ -1,12 +1,9 @@
-module Cfgparser (runParser, module Result) where
+module Cfgparser (runParser, module ParserRequirements) where
 
-import Scanner
-import Parsing
-import Result
-import ParseState
+import ParserRequirements
+import Control.Applicative
 import Grammar
 import Data.Maybe
-import LanguageDefsParser
 
 gScanner = Scanner{ separateCasedIdentifiers=True
                   , ignoreWhitespace=True
