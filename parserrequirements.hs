@@ -57,6 +57,9 @@ instance Monad Result where
     p >>= f = case p of
         Result a -> f a
         Error e  -> Error e
+eitherToResult :: Either String String -> Result String
+eitherToResult (Left s) = Error s
+eitherToResult (Right c) = Error c
 
 -- Parsing
 newtype Parser a = P (ParseState -> (Maybe a, ParseState))
