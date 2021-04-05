@@ -62,7 +62,7 @@ parserRequirements = unlines [
     "        Error e  -> Error e",
     "eitherToResult :: Either String String -> Result String",
     "eitherToResult (Left s) = Error s",
-    "eitherToResult (Right c) = Error c",
+    "eitherToResult (Right c) = Result c",
     "",
     "-- Parsing",
     "newtype Parser a = P (ParseState -> (Maybe a, ParseState))",

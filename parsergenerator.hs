@@ -1,4 +1,4 @@
-module ParserGenerator (runParserGenerator, generateParser, pathToModule) where
+module ParserGenerator (runParserGenerator, generateParser, pathToModule, parserRequirements) where
 
 import System.IO
 import System.Directory
