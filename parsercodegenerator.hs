@@ -66,7 +66,7 @@ startCode =
     \    generatedState0 [] [] $ fmap AbsSynToken ts\n\n\
     \generatedError n [] = Error \"Ran out of tokens\"\n\
     \generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos ps\n\n\
-    \unpackFinal (AbsSynResult1 x) = x"
+    \unpackFinal (AbsSynResult1 x _) = x"
 
 -- List of state functions
 generateStatesList :: Int -> String
@@ -75,7 +75,7 @@ generateStatesList n = "generatedStates = [" ++ intercalate ", " ["generatedStat
 -- Create the state output data type
 generateAbsSynDataType :: [DFAProduction] -> String
 generateAbsSynDataType ps = "data AbsSynToken" ++ (concat $ fmap (" t"++) absSynNs) ++ " = AbsSynToken Token" ++
-    (concat $ fmap (\x -> " | AbsSynResult" ++ x ++ " t" ++ x) absSynNs)
+    (concat $ fmap (\x -> " | AbsSynResult" ++ x ++ " t" ++ x ++ " ParseState") absSynNs)
   where
     nonTerminalCount = length $ getNonTerminals ps
     absSynNs = fmap show [1..nonTerminalCount-1]
@@ -99,8 +99,8 @@ generateStateCode (DFAState _ as' ) n ps tm = aux as'
 
 -- Generate the pattern for matching next tokens
 generateStatePattern :: [DFAProduction] -> TokenMap -> RuleTokenType -> String
-generateStatePattern ps tm (RuleTerminal t) = "(AbsSynToken (Token ps (" ++ (replace "$$" "_" $ trim $ tokenPattern $ tm ! t) ++ ")))"
-generateStatePattern ps tm (RuleNonTerminal t) = "(AbsSynResult" ++ (show $ getProdIndex t ps) ++ " _)"
+generateStatePattern ps tm (RuleTerminal t) = "(AbsSynToken (Token _ (" ++ (replace "$$" "_" $ trim $ tokenPattern $ tm ! t) ++ ")))"
+generateStatePattern ps tm (RuleNonTerminal t) = "(AbsSynResult" ++ (show $ getProdIndex t ps) ++ " _ _)"
 
 -- Generate the action code for shifting, reducing or finishing
 generateStateAction :: Int -> DFAAction -> [DFAProduction] -> String
@@ -128,13 +128,13 @@ generateReductions ps tm = concat [(generateReduction v ps tm) ++ "\n\n" | v <- 
 generateReduction :: Int -> [DFAProduction] -> TokenMap -> String
 generateReduction i ps tm = "generatedReduction" ++ (show i) ++ " " ++ vPattern ++
     " = AbsSynResult" ++ (show $ getProdIndex (p^.dfaProductionName) ps) ++
-    " (" ++ (p^.dfaProductionResult.to trim) ++ ")"
+    " (" ++ (p^.dfaProductionResult.to trim) ++ ") ps1"
   where
     p = ps !! i
     prodTokens = p^.dfaProductionTokens
     vPattern = "(" ++ (concat $ reverse [viPattern (show $ i + 1) (prodTokens !! i) ++ ":" | i <- [0..length prodTokens - 1]]) ++ "_)"
     viPattern i' (RuleTerminal t) = concat ["(AbsSynToken (Token ps", i', " ", terminalPattern t i', "))"]
-    viPattern i' (RuleNonTerminal prod) = concat ["(AbsSynResult", show $ getProdIndex prod ps, " v", i', ")"]
+    viPattern i' (RuleNonTerminal prod) = concat ["(AbsSynResult", show $ getProdIndex prod ps, " v", i', " ps", i', ")"]
     terminalPattern t i' = if length patternSplit == 1 then v else "(" ++ intercalate v patternSplit ++ ")"
       where
         v = "v" ++ i'
