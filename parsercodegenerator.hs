@@ -63,7 +63,8 @@ startCode :: String
 startCode =
     "runParser str = do\n\
     \    ts <- scan gScanner str\n\
-    \    generatedState0 [] [] $ fmap AbsSynToken ts\n\n\
+    \    let ps = if length ts == 0 then parseState \"\" else let (Token ps' _) = head ts in ps'\n\
+    \    generatedState0 ps [] [] $ fmap AbsSynToken ts\n\n\
     \generatedError n [] = Error \"Ran out of tokens\"\n\
     \generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos ps\n\n\
     \unpackFinal (AbsSynResult1 x _) = x"
@@ -91,23 +92,25 @@ generateStatesCode ss' ps tm = aux ss' 0
 generateStateCode :: DFAState -> Int -> [DFAProduction] -> TokenMap -> String
 generateStateCode (DFAState _ as' ) n ps tm = aux as'
   where
-    -- generatedStateX :: [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken
-    aux [] = "generatedState" ++ (show n) ++ " vs ss xs = generatedError " ++ show n ++ " xs"
-    aux ((t, a):as) = "generatedState" ++ (show n) ++ " vs ss (x@" ++ generateStatePattern ps tm t ++ ":xs) = "
-        ++ generateStateAction n a ps ++ "\n"
+    -- generatedStateX :: ParseState -> [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken
+    aux [] = "generatedState" ++ (show n) ++ " _ _ _ xs = generatedError " ++ show n ++ " xs"
+    aux ((t, a):as) = "generatedState" ++ (show n) ++ " ps0 vs ss (x@" ++ pattern ++ ":xs) = "
+        ++ generateStateAction n a ps parseState ++ "\n"
         ++ aux as
+      where
+        (pattern, parseState) = generateStatePattern ps tm t
 
 -- Generate the pattern for matching next tokens
-generateStatePattern :: [DFAProduction] -> TokenMap -> RuleTokenType -> String
-generateStatePattern ps tm (RuleTerminal t) = "(AbsSynToken (Token _ (" ++ (replace "$$" "_" $ trim $ tokenPattern $ tm ! t) ++ ")))"
-generateStatePattern ps tm (RuleNonTerminal t) = "(AbsSynResult" ++ (show $ getProdIndex t ps) ++ " _ _)"
+generateStatePattern :: [DFAProduction] -> TokenMap -> RuleTokenType -> (String, String)
+generateStatePattern ps tm (RuleTerminal t) = ("(AbsSynToken (Token ps (" ++ (replace "$$" "_" $ trim $ tokenPattern $ tm ! t) ++ ")))", "ps")
+generateStatePattern ps tm (RuleNonTerminal t) = ("(AbsSynResult" ++ (show $ getProdIndex t ps) ++ " _ _)", "ps0")
 
 -- Generate the action code for shifting, reducing or finishing
-generateStateAction :: Int -> DFAAction -> [DFAProduction] -> String
-generateStateAction i DFAFinish ps = "return $ unpackFinal $ head vs"
-generateStateAction i (DFAShift i') ps = "generatedState" ++ (show i') ++ " (x:vs) (" ++ (show i) ++ ":ss) xs"
-generateStateAction i (DFAReduce i') ps = nextStateStr ++ " " ++ dropStrVs ++ " " ++ dropStr ++ " (x':x:xs)\n\
-\  where x' = generatedReduction" ++ show i' ++ " vs"
+generateStateAction :: Int -> DFAAction -> [DFAProduction] -> String -> String
+generateStateAction i DFAFinish ps _ = "return $ unpackFinal $ head vs"
+generateStateAction i (DFAShift i') ps parseState = "generatedState" ++ (show i') ++ " " ++ parseState ++ " (x:vs) (" ++ (show i) ++ ":ss) xs"
+generateStateAction i (DFAReduce i') ps parseState = nextStateStr ++ " " ++ parseState ++ " " ++ dropStrVs ++ " " ++ dropStr ++ " (x':x:xs)\n\
+\  where x' = generatedReduction" ++ show i' ++ " ps0 vs"
   where
     prod = ps !! i'
     result = prod^.dfaProductionResult
@@ -126,13 +129,14 @@ generateReductions ps tm = concat [(generateReduction v ps tm) ++ "\n\n" | v <- 
 
 -- Pattern match expected tokens for reduction, call result code from gmr file, pack result in correct AbsSynToken constructor
 generateReduction :: Int -> [DFAProduction] -> TokenMap -> String
-generateReduction i ps tm = "generatedReduction" ++ (show i) ++ " " ++ vPattern ++
+generateReduction i ps tm = "generatedReduction" ++ (show i) ++ " ps0 " ++ vPattern ++
     " = AbsSynResult" ++ (show $ getProdIndex (p^.dfaProductionName) ps) ++
-    " (" ++ (p^.dfaProductionResult.to trim) ++ ") ps1"
+    " (" ++ (p^.dfaProductionResult.to trim) ++ ") ps" ++ if count == 0 then "0" else "1"
   where
     p = ps !! i
     prodTokens = p^.dfaProductionTokens
-    vPattern = "(" ++ (concat $ reverse [viPattern (show $ i + 1) (prodTokens !! i) ++ ":" | i <- [0..length prodTokens - 1]]) ++ "_)"
+    count = length prodTokens
+    vPattern = "(" ++ (concat $ reverse [viPattern (show $ i + 1) (prodTokens !! i) ++ ":" | i <- [0..count - 1]]) ++ "_)"
     viPattern i' (RuleTerminal t) = concat ["(AbsSynToken (Token ps", i', " ", terminalPattern t i', "))"]
     viPattern i' (RuleNonTerminal prod) = concat ["(AbsSynResult", show $ getProdIndex prod ps, " v", i', " ps", i', ")"]
     terminalPattern t i' = if length patternSplit == 1 then v else "(" ++ intercalate v patternSplit ++ ")"
