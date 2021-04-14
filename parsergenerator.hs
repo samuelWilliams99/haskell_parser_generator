@@ -31,7 +31,7 @@ runParserGenerator path
             putStrLn ("No such file \"" ++ path ++ "\"")
         else do
             contents <- readFile path
-            case generateParser' contents (pathToModule path) Nothing of
+            case generateParser' contents (pathToModule path) id of
                 Error e -> putStrLn e
                 Result code -> do
                     writeFile codeOutPath code
@@ -70,18 +70,16 @@ generateScannerSpec raw = generateScannerSpecAux raw scannerSpec
                 otherwise -> Error "Multiple extra parser definitions"
 
 -- Parse, build scanner spec and DFA, then generate code.
-generateParser' :: String -> String -> Maybe String -> Result String
-generateParser' str name mPre = do
+generateParser' :: String -> String -> (String -> String) -> Result String
+generateParser' str name preMap = do
     (exports, preCode, scannerSpecRaw, grammar) <- runParser str
     scannerSpec <- generateScannerSpec scannerSpecRaw
 
     dfa <- generateDFA $ addScannerSpecTokens scannerSpec grammar
 
-    let pre = preCode ++ fromMaybe "" mPre
+    return $ generateCode name exports (preMap preCode) scannerSpec dfa
 
-    return $ generateCode name exports pre scannerSpec dfa
-
-generateParser :: String -> String -> Maybe String -> Either String String
-generateParser str name mPre = case generateParser' str name mPre of
+generateParser :: String -> String -> (String -> String) -> Either String String
+generateParser str name preMap = case generateParser' str name preMap of
     Error e -> Left e
     Result c -> Right c
