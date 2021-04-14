@@ -70,16 +70,16 @@ generateScannerSpec raw = generateScannerSpecAux raw scannerSpec
                 otherwise -> Error "Multiple extra parser definitions"
 
 -- Parse, build scanner spec and DFA, then generate code.
-generateParser' :: String -> String -> (String -> String) -> Result String
-generateParser' str name preMap = do
+generateParser' :: String -> String -> (Maybe String -> Maybe String) -> Result String
+generateParser' str name exportsMap = do
     (exports, preCode, scannerSpecRaw, grammar) <- runParser str
     scannerSpec <- generateScannerSpec scannerSpecRaw
 
     dfa <- generateDFA $ addScannerSpecTokens scannerSpec grammar
 
-    return $ generateCode name exports (preMap preCode) scannerSpec dfa
+    return $ generateCode name (exportsMap exports) preCode scannerSpec dfa
 
-generateParser :: String -> String -> (String -> String) -> Either String String
-generateParser str name preMap = case generateParser' str name preMap of
+generateParser :: String -> String -> (Maybe String -> Maybe String) -> Either String String
+generateParser str name exportsMap = case generateParser' str name exportsMap of
     Error e -> Left e
     Result c -> Right c
