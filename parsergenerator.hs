@@ -13,6 +13,7 @@ import ParserRequirementsCode
 import ParserRequirements
 import Data.HashMap.Strict as Map
 import Data.Char
+import Data.Maybe
 
 -- Run with first arg as path
 main :: IO ()
@@ -30,7 +31,7 @@ runParserGenerator path
             putStrLn ("No such file \"" ++ path ++ "\"")
         else do
             contents <- readFile path
-            case generateParser' contents $ pathToModule path of
+            case generateParser' contents (pathToModule path) Nothing of
                 Error e -> putStrLn e
                 Result code -> do
                     writeFile codeOutPath code
@@ -69,16 +70,18 @@ generateScannerSpec raw = generateScannerSpecAux raw scannerSpec
                 otherwise -> Error "Multiple extra parser definitions"
 
 -- Parse, build scanner spec and DFA, then generate code.
-generateParser' :: String -> String -> Result String
-generateParser' str name = do
+generateParser' :: String -> String -> Maybe String -> Result String
+generateParser' str name mPre = do
     (exports, preCode, scannerSpecRaw, grammar) <- runParser str
     scannerSpec <- generateScannerSpec scannerSpecRaw
 
     dfa <- generateDFA $ addScannerSpecTokens scannerSpec grammar
 
-    return $ generateCode name exports preCode scannerSpec dfa
+    let pre = preCode ++ fromMaybe "" mPre
 
-generateParser :: String -> String -> Either String String
-generateParser str name = case generateParser' str name of
+    return $ generateCode name exports pre scannerSpec dfa
+
+generateParser :: String -> String -> Maybe String -> Either String String
+generateParser str name mPre = case generateParser' str name mPre of
     Error e -> Left e
     Result c -> Right c
