@@ -1,3 +1,13 @@
+{-|
+Module      : ParserCodeGenerator
+Description : Takes information about the @Scanner@ and @DFA@ and outputs haskell code
+Copyright   : (c) Samuel Williams, 2021
+License     : GPL-3
+Maintainer  : samuel.will1999@gmail.com
+Stability   : release
+
+Code generator for the parser, all validity checks have already passed at this point, thus the single function in this module cannot fail
+-}
 module ParserCodeGenerator (generateCode) where
 
 import DFA
@@ -19,8 +29,13 @@ reindent n str = intercalate "\n" $ map (\line -> (replicate n ' ') ++ (drop min
 unindent :: String -> String
 unindent = reindent 0
 
--- Generate each section of code and concat together
-generateCode :: String -> Maybe String -> String -> ScannerSpec -> DFA -> String
+-- | Takes @Scanner@ and @DFA@ information and output the parser code
+generateCode :: String -- ^ The generated modules name
+             -> Maybe String -- ^ Optional additional exports
+             -> String -- ^ Initial haskell code in output
+             -> ScannerSpec -- ^ @ScannerSpec@ as defined in "Grammar"
+             -> DFA -- ^ @DFA@ as defined in "DFA"
+             -> String -- ^ Outputted parser haskell code
 generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
     concat [ generateModuleDef name exports, "\n\n"
            , imports, "\n"
