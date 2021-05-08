@@ -1,3 +1,13 @@
+{-|
+Module      : ShiftReducePreProcess
+Description : Pre-processing of the Grammar for Shift-Reduce.
+Copyright   : (c) Samuel Williams, 2021
+License     : GPL-3
+Maintainer  : samuel.will1999@gmail.com
+Stability   : release
+
+Handles changing modifiers to simple rules, building the various @HashMap@s needed, and ensuring the Grammar is semantically well formed.
+-}
 module ShiftReducePreProcess ( handleModifiers
                              , makeTokenMap
                              , makePrecMap
@@ -16,6 +26,7 @@ import Data.List.Split
 import Control.Lens
 
 -- handleRuleModifiers on each rule, concat results
+-- | Converts all token modifiers to extra rules, giving a modifier-less grammar.
 handleModifiers :: Grammar -> Result Grammar
 handleModifiers gmr = do
     newRules <- mapM handleRuleModifiers $ rules gmr

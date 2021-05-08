@@ -48,7 +48,13 @@ generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
            , generateReductions ps tm]
 
 generateModuleDef :: String -> Maybe String -> String
-generateModuleDef name mExports = "module " ++ name ++ " (runParser, module ParserRequirements" ++ exports ++ ") where"
+generateModuleDef name mExports = unlines [
+    "{-|",
+    "Module      : " ++ name,
+    "Description : Parser generated with the Haskell Parser Generator - https://github.com/samuelWilliams99/haskell_parser_generator",
+    "-}",
+    "module " ++ name ++ " (runParser, module ParserRequirements" ++ exports ++ ") where"
+    ]
   where
     exports = case mExports of
                   Nothing -> ""
@@ -75,14 +81,18 @@ generateScannerCode spec = "gScanner = Scanner{ separateCasedIdentifiers=" ++ (s
 
 -- Defines entrypoint, error point, and util unpack function
 startCode :: String
-startCode =
-    "runParser str = do\n\
-    \    ts <- scan gScanner str\n\
-    \    let ps = if length ts == 0 then parseState \"\" else let (Token ps' _) = head ts in ps'\n\
-    \    generatedState0 ps [] [] $ fmap AbsSynToken ts\n\n\
-    \generatedError n [] = Error \"Ran out of tokens\"\n\
-    \generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos ps\n\n\
-    \unpackFinal (AbsSynResult1 x _) = x"
+startCode = unlines [
+    "-- | Generates the Abstract Syntax Tree from an input string, can fail",
+    "runParser str = do",
+    "    ts <- scan gScanner str",
+    "    let ps = if length ts == 0 then parseState \"\" else let (Token ps' _) = head ts in ps'",
+    "    generatedState0 ps [] [] $ fmap AbsSynToken ts",
+    "",
+    "generatedError n [] = Error \"Ran out of tokens\"",
+    "generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos p",
+    "",
+    "unpackFinal (AbsSynResult1 x _) = x"
+    ]
 
 -- List of state functions
 generateStatesList :: Int -> String
