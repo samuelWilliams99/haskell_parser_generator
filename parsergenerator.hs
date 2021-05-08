@@ -7,7 +7,7 @@ Maintainer  : samuel.will1999@gmail.com
 Stability   : release
 
 This module takes a .gmr file (or the contents of such a file in String form) and outputs the code for a Haskell parser defined by that file.
-This can be called in an @Either String String@ monad, where @Left@ indicates success and gives the output code, and @Right@ indicates an error, and gives a message.
+This can be called in an @Either String String@ monad, where @Right@ indicates success and gives the output code, and @Left@ indicates an error, and gives a message.
 Normally however, this will be called using the @IO@ function, handling file input and output itself.
 The specification of the .gmr file can be found here: <https://github.com/samuelWilliams99/haskell_parser_generator#gmr-format>
 -}
@@ -99,7 +99,7 @@ generateParser' str name exportsMap = do
 generateParser :: String -- ^ The input gmr definition
                -> String -- ^ The module name for the outputted file
                -> (Maybe String -> Maybe String) -- ^ A map function applied to the exports, in case functions defined in @%precode@ need to be exported
-               -> Either String String -- ^ The output code or error, @Left@ indicates success, @Right@ indicates failure
+               -> Either String String -- ^ The output code or error, @Right@ indicates success, @Left@ indicates failure
 generateParser str name exportsMap = case generateParser' str name exportsMap of
     Error e -> Left e
     Result c -> Right c
