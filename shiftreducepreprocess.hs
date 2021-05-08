@@ -27,18 +27,17 @@ import Control.Lens
 
 -- handleRuleModifiers on each rule, concat results
 -- | Converts all token modifiers to extra rules, giving a modifier-less grammar.
-handleModifiers :: Grammar -> Result Grammar
-handleModifiers gmr = do
-    newRules <- mapM handleRuleModifiers $ rules gmr
-    return gmr{ rules=nub $ concat newRules }
+handleModifiers :: Grammar -> Grammar
+handleModifiers gmr = gmr{ rules=nub $ concat newRules }
+  where
+    newRules = Prelude.map handleRuleModifiers $ rules gmr
 
 -- Call handleProductionModifiers on each production of a rule
-handleRuleModifiers :: Rule -> Result [Rule]
-handleRuleModifiers rule = do
-    prodRulePairs <- mapM handleProductionModifiers $ ruleProductions rule
-    let (prods, newRules) = unzip prodRulePairs
-
-    return $ (rule{ ruleProductions=concat prods }):(concat newRules)
+handleRuleModifiers :: Rule -> [Rule]
+handleRuleModifiers rule = (rule{ ruleProductions=concat prods }):(concat newRules)
+  where
+    prodRulePairs = Prelude.map handleProductionModifiers $ ruleProductions rule
+    (prods, newRules) = unzip prodRulePairs
 
 -- Rule builders for token modifiers
 
@@ -100,16 +99,16 @@ getSepStr Nothing = ""
 getSepStr (Just x) = "(" ++ getTokenTypeStr x ++ ")"
 
 -- Recurse over tokens of a production, modifying said rules productions and the global rule list as needed
-handleProductionModifiers :: RuleProduction -> Result ([RuleProduction], [Rule])
-handleProductionModifiers prod@(RuleProduction [] _ _) = Result ([prod], [])
-handleProductionModifiers prod@(RuleProduction (x:xs) _ _) = do
-    ( newProds, newRules ) <- handleProductionModifiers $ prod{ productionTokens=xs }
+handleProductionModifiers :: RuleProduction -> ([RuleProduction], [Rule])
+handleProductionModifiers prod@(RuleProduction [] _ _) = ([prod], [])
+handleProductionModifiers prod@(RuleProduction (x:xs) _ _) =
     case tokenModifier x of
-        RuleTokenModifierNormal -> Result ( conToken x newProds, newRules )
-        RuleTokenModifierSome sep -> Result ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds, (makeSomeRule x sep):newRules )
-        RuleTokenModifierMany sep -> Result ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds ++ prodsPrefixNonTerminal "-" newProds, (makeEmptyRule x):(makeSomeRule x sep):newRules )
-        RuleTokenModifierOptional -> Result ( prodsPrefixNonTerminal "?" newProds ++ prodsPrefixNonTerminal "-" newProds, (makeEmptyRule x):(makeJustRule x):newRules )
+        RuleTokenModifierNormal -> ( conToken x newProds, newRules )
+        RuleTokenModifierSome sep -> ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds, (makeSomeRule x sep):newRules )
+        RuleTokenModifierMany sep -> ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds ++ prodsPrefixNonTerminal "-" newProds, (makeEmptyRule x):(makeSomeRule x sep):newRules )
+        RuleTokenModifierOptional -> ( prodsPrefixNonTerminal "?" newProds ++ prodsPrefixNonTerminal "-" newProds, (makeEmptyRule x):(makeJustRule x):newRules )
   where
+    ( newProds, newRules ) = handleProductionModifiers $ prod{ productionTokens=xs }
     conToken x prods = Prelude.map (\prod' -> prod'{ productionTokens=x:(productionTokens prod') }) prods
     prodsPrefixNonTerminal c prods = conToken (nonTerminalToken $ c ++ (getTokenStr x)) prods
 

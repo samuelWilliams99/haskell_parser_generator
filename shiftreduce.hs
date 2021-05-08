@@ -24,7 +24,7 @@ deleteAt _ []     = []
 
 generateDFA :: Grammar -> Result DFA
 generateDFA g = do
-    (Grammar ts ps rs) <- handleModifiers g
+    let (Grammar ts ps rs) = handleModifiers g
     tokenMap <- makeTokenMap ts
     precMap <- makePrecMap ps tokenMap
     prods <- makeProductions rs rs tokenMap precMap
