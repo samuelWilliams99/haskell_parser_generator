@@ -114,7 +114,7 @@ handleProductionModifiers prod@(RuleProduction (x:xs) _ _) =
 
 -- Pre processing
 
--- token map generation
+-- | Builds a @HashMap@ from a list of @TokenDef@s, erroring on multiple definitions and invalid patterns
 makeTokenMap :: [TokenDef] -> Result TokenMap
 makeTokenMap [] = return $ singleton "%EOF" $ TokenDef "%EOF" "TokenEOF"
 makeTokenMap (t:ts) = do
@@ -132,7 +132,8 @@ indexHashMap hm k err = case hm^.at k of
                             Just v  -> Result v
                             Nothing -> Error err
 
--- prec map generation
+-- | Builds a @HashMap@ from TokenDef to Prec using the precedence levels
+-- Errors if a token is present in multiple precedence levels
 makePrecMap :: [PrecLevel] -> TokenMap -> Result PrecMap
 makePrecMap [] _ = return mempty
 makePrecMap (p:ps) tm = do
@@ -163,6 +164,7 @@ ruleNonTerminalCheck r rs = do
         1         -> Result $ RuleNonTerminal r
         otherwise -> Error $ "Multiple definitions of rule " ++ r
 
+-- | Converts rules into a list of @DFAProduction@s, checking all tokens within the rule are valid, and assigning the correct precedences.
 makeProductions :: [Rule] -> [Rule] -> TokenMap -> PrecMap -> Result [DFAProduction]
 makeProductions [] _ _ _ = return []
 makeProductions (r:rs) rs' tm pm = do
@@ -198,7 +200,7 @@ isTerminal :: RuleTokenType -> Bool
 isTerminal (RuleTerminal _) = True
 isTerminal _ = False
 
--- Follow map generation
+-- | Gets the names of all Non-Terminals from a list of @DFAProduction@s
 getNonTerminals :: [DFAProduction] -> [String]
 getNonTerminals = nub . (fmap $ view dfaProductionName)
 
@@ -244,6 +246,9 @@ nextTerminals ps tm nt = auxNext [] nt
     getProductions nt' = filter (view $ dfaProductionName.(to (==nt'))) ps
     auxNext checked nt' = combine $ fmap ((aux (nt':checked)) . view dfaProductionTokens) $ getProductions nt'
 
+-- | Calculates all the follower tokens for every Non-Terminal in a list of productions.
+-- Followers are defined as terminals that can be read directly after a Non-Terminal, taking all @DFAProduction@s into account.
+-- More information about how to calculate this can be found here: <http://www.cs.nuim.ie/~jpower/Courses/Previous/parsing/node48.html>
 makeFollowMap :: [DFAProduction] -> TokenMap -> FollowMap
 makeFollowMap ps tm = aux $ getNonTerminals ps
   where

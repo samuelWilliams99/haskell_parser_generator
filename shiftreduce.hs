@@ -1,3 +1,15 @@
+{-|
+Module      : ShiftReduce
+Description : Builds a Deterministic Finite Automata from a Grammar.
+Copyright   : (c) Samuel Williams, 2021
+License     : GPL-3
+Maintainer  : samuel.will1999@gmail.com
+Stability   : release
+
+Uses the Shift-Reduce algorithm to build a @DFA@ from the "DFA" module.
+Shift-Reduce conflicts are automatically resolved if sufficient precedence data has been supplied, otherwise an error is thrown.
+Similarly, Reduce-Reduce conflicts will cause the algorithm to fail.
+-}
 module ShiftReduce (module ShiftReducePreProcess, generateDFA) where
 
 import DFA
@@ -22,6 +34,7 @@ deleteAt _ []     = []
 
 -- State machine generation
 
+-- | Converts a @Grammar@ from "Grammar" to a @DFA@, calling functions exported from "ShiftReducePreProcess"
 generateDFA :: Grammar -> Result DFA
 generateDFA g = do
     let (Grammar ts ps rs) = handleModifiers g

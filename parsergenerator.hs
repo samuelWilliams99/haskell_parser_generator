@@ -1,3 +1,16 @@
+{-|
+Module      : ParserGenerator
+Description : Generates Haskell Parsers from Context Free Grammar definitions, via a .gmr file.
+Copyright   : (c) Samuel Williams, 2021
+License     : GPL-3
+Maintainer  : samuel.will1999@gmail.com
+Stability   : release
+
+This module takes a .gmr file (or the contents of such a file in String form) and outputs the code for a Haskell parser defined by that file.
+This can be called in an @Either String String@ monad, where @Left@ indicates success and gives the output code, and @Right@ indicates an error, and gives a message.
+Normally however, this will be called using the @IO@ function, handling file input and output itself.
+The specification of the .gmr file can be found here: <https://github.com/samuelWilliams99/haskell_parser_generator#gmr-format>
+-}
 module ParserGenerator (runParserGenerator, generateParser, pathToModule, parserRequirements) where
 
 import System.IO
@@ -22,6 +35,8 @@ main = do
     runParserGenerator $ head args
 
 -- Search for file, check path, generate and write new file
+-- | Takes the path to an input .gmr file, ensures it is correct, then generates the associated .hs file containing the Parser.
+-- On failure, the IO will print to console containing ther error, and stop.
 runParserGenerator :: String -> IO ()
 runParserGenerator path
     | takeExtension path /= ".gmr" = putStrLn "Invalid file extension, must be .gmr"
@@ -40,7 +55,8 @@ runParserGenerator path
                     codeOutPath = replaceExtension path "hs"
                     reqsOutPath = replaceFileName path "parserrequirements.hs"
 
--- Converts a full path to a module name : my/path/to/parser.hs -> Parser
+-- | Converts a full path to a module name, for example:
+-- @my/path/to/parser.hs@ -> @Parser@
 pathToModule :: String -> String
 pathToModule path = (toUpper $ head name):(tail name)
   where
@@ -79,7 +95,11 @@ generateParser' str name exportsMap = do
 
     return $ generateCode name (exportsMap exports) preCode scannerSpec dfa
 
-generateParser :: String -> String -> (Maybe String -> Maybe String) -> Either String String
+-- | Generates a parser without the use of the IO monad, for when you wish to handle IO yourself
+generateParser :: String -- ^ The input gmr definition
+               -> String -- ^ The module name for the outputted file
+               -> (Maybe String -> Maybe String) -- ^ A map function applied to the exports, in case functions defined in @%precode@ need to be exported
+               -> Either String String -- ^ The output code or error, @Left@ indicates success, @Right@ indicates failure
 generateParser str name exportsMap = case generateParser' str name exportsMap of
     Error e -> Left e
     Result c -> Right c
