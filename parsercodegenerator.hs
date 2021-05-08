@@ -89,7 +89,7 @@ startCode = unlines [
     "    generatedState0 ps [] [] $ fmap AbsSynToken ts",
     "",
     "generatedError n [] = Error \"Ran out of tokens\"",
-    "generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos p",
+    "generatedError n ((AbsSynToken (Token ps x)):xs) = Error $ \"Unexpected token: \" ++ (show x) ++ \" at \" ++ showPos ps",
     "",
     "unpackFinal (AbsSynResult1 x _) = x"
     ]
