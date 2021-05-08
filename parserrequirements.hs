@@ -8,11 +8,17 @@ Maintainer  : samuel.will1999@gmail.com
 Stability   : release
 
 This module is copied to any generated parser and contains 5 sections of code:
+
   [@ParseState@] Data type and helper functions for keeping track of source position
+
   [@Result@] Maybe-like data type including error string for failure
+
   [@Parser a@] Modified @Parser@ library from Graham Huttons Programming in Haskell
+
   [@Scanner@] Configurable scanner/lexer taking a String and returning a list of @Token@s
+
   [@languageDefsParser@] A set of @Parser@s specifically for the gmr file, and any other similar meta-languages
+
 -}
 module ParserRequirements (
 -- * ParseState
@@ -101,10 +107,11 @@ data ParseState = ParseState { line   :: Int
                              } deriving Show
 {-|
 Generates a human readable parse position string, as shown below:
+
 @
 Line 1, Column 14
-    function text#()
-                 ^
+     function text#()
+                  ^
 @
 -}
 showPos :: ParseState -> String
