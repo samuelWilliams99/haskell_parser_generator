@@ -33,11 +33,12 @@ The following types are used in the `gmr` file:
 
 ### Overall structure
 The structure of the `gmr` file is as follows, with each section explained further down
-1. Optional CodeBlock - Placed directly at the start of the generated file
-2. [Scanner specification](#scanner-specificiation) - List of scanner directives (can be 0) such as `%operators "+" "-"`.
-3. [Optional Token patterns](#token-patterns) - Map from terminal names to haskell patterns to match. Used for custom terminals when using the `%extraparser` directive with `TokenCustom`
-4. [Optional Precedence and associativity definitions](#precedence-and-associativity) - Identical stucture to Yaml or Happy, list of levels defining associativity and tokens.
-5. [Rules](#rules) - List of productions defined as Nonterminals mapping to lists of terminals/nonterminals and a codeblock result for the reduction.
+1. %exports directive - This optional directive takes a CodeBlock of names to be exported from the generated parser
+2. %precode directive - This optional directive takes a CodeBlock of haskell code to be copied to the start of the parser
+3. [Scanner specification](#scanner-specificiation) - List of scanner directives (can be 0) such as `%operators "+" "-"`.
+4. [Optional Token patterns](#token-patterns) - Map from terminal names to haskell patterns to match. Used for custom terminals when using the `%extraparser` directive with `TokenCustom`
+5. [Optional Precedence and associativity definitions](#precedence-and-associativity) - Identical stucture to YAML or Happy, list of levels defining associativity and tokens.
+6. [Rules](#rules) - List of productions defined as Nonterminals mapping to lists of terminals/nonterminals and a codeblock result for the reduction.
 
 ### Scanner Specificiation
 This is a list of directives defining behaviours of the scanner.
