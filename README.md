@@ -135,11 +135,12 @@ MyRule :: identifier "+" OtherRule %prec "*" { ( v1, v2 ) }
 The first rule in the list will be the top of the syntax tree.
 
 ## Extra notes
+The following two types are defined within [this file](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parserrequirements.hs)
 ### Result type
-[This file](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/result.hs) defines the `Result` data type, which is very similar to the `Maybe` type, but includes an error string in the failure constructor. It contains identical instances for `Functor`, `Applicative` and `Monad`
+The `Result` data type (defined [here](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parserrequirements.hs#L154)) is very similar to the `Maybe` type, but includes an error string in the failure constructor. It contains identical instances for `Functor`, `Applicative` and `Monad`
 
 ### ParseState type
-[This file](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parsestate.hs) defines the `ParseState` data type, which contains the following information about the scanner's state at any given time.
+The `ParseState` data type (defined [here](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parserrequirements.hs#L102)) contains the following information about the scanner's state at any given time.
 - Line number (line)
 - Column number (column)
 - Input string position (pos)
@@ -169,4 +170,4 @@ The parser map works by modifying a list of `TokenType` `Parsers`, the default d
 9. Float literals
 
 Since these Parsers are all expected to return a TokenType, there is a `TokenCustom String String` constructor in TokenType. It is expected that the first string is a type, and the second is data. This is used for the gmr parser for CodeBlocks and Directives, where parsers for both these types were made, then simply consed to the parser list.  
-For more information on `Parsers`, the [Parsing](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parsing.hs) module defines several examples, and was modified from the library discussed in [this video](https://www.youtube.com/watch?v=dDtZLm7HIJs&ab_channel=Computerphile), by Graham Hutton.  
+For more information on `Parsers`, the [Parsing](https://github.com/samuelWilliams99/haskell_parser_generator/blob/main/parserrequirements.hs#L176) module defines several examples, and was modified from the library discussed in [this video](https://www.youtube.com/watch?v=dDtZLm7HIJs&ab_channel=Computerphile), by Graham Hutton.  
