@@ -26,19 +26,19 @@ import Data.Maybe
       keepComments  { TokenCustom "Directive" "keepcomments" }
       parserMap     { TokenCustom "Directive" "parsermap" }
       empty         { TokenCustom "Directive" "empty" }
-      codeBlock     { TokenCustom "CodeBlock" $$ }
+      codeBlock     { TokenCustom "CodeBlock" $$ } => { String }
 
 FullDef :: Export? PreCode? ScannerDef* Grammar          { (v1, fromMaybe "" v2, v3, v4) }
-#                                                      => { (Maybe String, String, [(String, [String])], Grammar) }
+                                                      => { (Maybe String, String, [(String, [String])], Grammar) }
 
 Export :: export codeBlock                               { v2 }
-#                                                      => { String }
+                                                      => { String }
 
 PreCode :: precode codeBlock                             { v2 }
-#                                                      => { String }
+                                                      => { String }
 
 Grammar :: TokenDefs? PrecDef* Rule+                     { Grammar (fromMaybe [] v1) v2 v3 }
-#                                                      => { Grammar }
+                                                      => { Grammar }
 
 ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | keywords stringLit+                        { ("kwds", v2) }
@@ -48,49 +48,49 @@ ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | keepSpaces                                 { ("keepspace", []) }
             | keepComments                               { ("keepcmts", []) }
             | parserMap codeBlock                        { ("parser", [v2]) }
-#                                                      => { (String, [String]) }
+                                                      => { (String, [String]) }
 
 TokenDefs :: token TokenMapping+                         { v2 }
-#                                                      => { [TokenDef] }
+                                                      => { [TokenDef] }
 
 TypeDef :: '=>' codeBlock                                { v2 }
-#                                                      => { String }
+                                                      => { String }
 
 TokenMapping :: identifier codeBlock TypeDef?            { TokenDef v1 v2 v3 }
               | stringLit codeBlock TypeDef?             { TokenDef v1 v2 v3 }
-#                                                      => { TokenDef }
+                                                      => { TokenDef }
 
 PrecDef :: Prec Token+                                   { PrecLevel v1 v2 }
-#                                                      => { PrecLevel }
+                                                      => { PrecLevel }
 
 Token :: stringLit                                       { v1 }
        | identifier                                      { v1 }
-#                                                      => { String }
+                                                      => { String }
 
 Prec :: left                                             { LeftAssoc }
       | right                                            { RightAssoc }
       | nonAssoc                                         { NonAssoc }
-#                                                      => { Associativity }
+                                                      => { Associativity }
 
 Rule :: upperIdentifier '::' RuleDef+('|') TypeDef?      { Rule v1 v3 v4 }
-#                                                      => { Rule }
+                                                      => { Rule }
 
 RuleDef :: empty codeBlock                               { RuleProduction [] v2 Nothing }
          | RuleToken+ codeBlock                          { RuleProduction v1 v2 Nothing }
          | RuleToken+ prec stringLit codeBlock           { RuleProduction v1 v4 $ Just v3 }
          | RuleToken+ prec identifier codeBlock          { RuleProduction v1 v4 $ Just v3 }
-#                                                      => { RuleProduction }
+                                                      => { RuleProduction }
 
 RuleToken :: RuleTokenType                               { RuleToken v1 RuleTokenModifierNormal }
            | RuleTokenType '+' ModSeperator?             { RuleToken v1 $ RuleTokenModifierSome v3 }
            | RuleTokenType '*' ModSeperator?             { RuleToken v1 $ RuleTokenModifierMany v3 }
            | RuleTokenType '?'                           { RuleToken v1 RuleTokenModifierOptional }
-#                                                      => { RuleToken }
+                                                      => { RuleToken }
 
 ModSeperator :: "(" RuleTokenType ")"                    { v2 }
-#                                                      => { RuleTokenType }
+                                                      => { RuleTokenType }
 
 RuleTokenType :: upperIdentifier                         { RuleNonTerminal v1 }
                | stringLit                               { RuleTerminal v1 }
                | identifier                              { RuleTerminal v1 }
-#                                                      => { RuleTokenType }
+                                                      => { RuleTokenType }
