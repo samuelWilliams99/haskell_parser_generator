@@ -101,13 +101,14 @@ startCode = unlines [
 generateStatesList :: Int -> String
 generateStatesList n = "generatedStates = [" ++ intercalate ", " ["generatedState" ++ (show n') | n' <- [0..n - 1]] ++ "]"
 
+-- TODO: the numbers here are wrong for reductions?
 -- Create the state output data type
 generateAbsSynDataType :: [DFAProduction] -> (String, Bool)
 generateAbsSynDataType ps = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken Token" ++ constructors, all isJust resultTypes)
   where
     typeParams = (concat $ fmap (\(mt, n) -> if isJust mt then "" else " t" ++ n ) types)
     constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " (" ++ fromMaybe ('t':n) mt ++ ") ParseState") types
-    uniqueProds = nubBy (on (==) _dfaProductionName) ps
+    uniqueProds = tail $ nubBy (on (==) _dfaProductionName) ps -- tail here as first production is START and we don't need a type for that
     resultTypes = fmap ((fmap trim) . _dfaProductionResultType) uniqueProds
     types = zip resultTypes $ fmap show [1..]
 
@@ -115,14 +116,15 @@ generateAbsSynDataType ps = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken
 generateStatesCode :: [DFAState] -> [DFAProduction] -> TokenMap -> Bool -> String
 generateStatesCode ss' ps tm isDefined = aux ss' 0
   where
+    outType = fromMaybe "" $ _dfaProductionResultType $ head ps
     aux [] n = ""
-    aux (s:ss) n = generateStateCode s n ps tm isDefined ++ "\n\n\n" ++ (aux ss $ n + 1)
+    aux (s:ss) n = generateStateCode s n ps tm isDefined outType ++ "\n\n\n" ++ (aux ss $ n + 1)
 
 -- Generate each state function
-generateStateCode :: DFAState -> Int -> [DFAProduction] -> TokenMap -> Bool -> String
-generateStateCode (DFAState _ as' ) n ps tm isDefined = (if isDefined then stateType else "") ++ aux as'
+generateStateCode :: DFAState -> Int -> [DFAProduction] -> TokenMap -> Bool -> String -> String
+generateStateCode (DFAState _ as' ) n ps tm isDefined outType = (if isDefined then stateType else "") ++ aux as'
   where
-    stateType = stateName ++ " :: ParseState -> [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken\n"
+    stateType = stateName ++ " :: ParseState -> [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result " ++ outType ++ "\n"
     stateName = "generatedState" ++ show n
     aux [] = stateName ++ " _ _ _ xs = generatedError " ++ show n ++ " xs"
     aux ((t, a):as) = stateName ++ " ps0 vs ss (x@" ++ pattern ++ ":xs) = "
