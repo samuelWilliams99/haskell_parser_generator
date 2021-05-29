@@ -124,7 +124,7 @@ generateStateCode (DFAState _ as' ) n ps tm isDefined = (if isDefined then state
   where
     stateType = stateName ++ " :: ParseState -> [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken\n"
     stateName = "generatedState" ++ show n
-    aux [] = stateName ++ (show n) ++ " _ _ _ xs = generatedError " ++ show n ++ " xs"
+    aux [] = stateName ++ " _ _ _ xs = generatedError " ++ show n ++ " xs"
     aux ((t, a):as) = stateName ++ " ps0 vs ss (x@" ++ pattern ++ ":xs) = "
         ++ generateStateAction n a ps parseState ++ "\n"
         ++ aux as
