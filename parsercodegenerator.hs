@@ -106,7 +106,7 @@ generateAbsSynDataType :: [DFAProduction] -> (String, Bool)
 generateAbsSynDataType ps = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken Token" ++ constructors, all isJust resultTypes)
   where
     typeParams = (concat $ fmap (\(mt, n) -> if isJust mt then "" else " t" ++ n ) types)
-    constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " " ++ fromMaybe ('t':n) mt ++ " ParseState") types
+    constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " (" ++ fromMaybe ('t':n) mt ++ ") ParseState") types
     uniqueProds = nubBy (on (==) _dfaProductionName) ps
     resultTypes = fmap ((fmap trim) . _dfaProductionResultType) uniqueProds
     types = zip resultTypes $ fmap show [1..]
