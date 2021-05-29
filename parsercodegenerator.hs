@@ -103,7 +103,7 @@ generateStatesList n = "generatedStates = [" ++ intercalate ", " ["generatedStat
 
 -- Create the state output data type
 generateAbsSynDataType :: [DFAProduction] -> String -> (String, Bool)
-generateAbsSynDataType ps tokenType = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken (Token " ++ tokenType ++ ")" ++ constructors, all isJust resultTypes)
+generateAbsSynDataType ps tokenType = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken (Token " ++ trim tokenType ++ ")" ++ constructors, all isJust resultTypes)
   where
     typeParams = (concat $ fmap (\(mt, n) -> if isJust mt then "" else " t" ++ n ) types)
     constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " (" ++ fromMaybe ('t':n) mt ++ ") ParseState") types
