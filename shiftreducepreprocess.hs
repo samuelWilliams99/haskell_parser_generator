@@ -173,14 +173,14 @@ ruleNonTerminalCheck r rs = do
         otherwise -> Error $ "Multiple definitions of rule " ++ r
 
 -- | Converts rules into a list of @DFAProduction@s, checking all tokens within the rule are valid, and assigning the correct precedences.
-makeProductions :: [Rule] -> [Rule] -> TokenMap -> PrecMap -> Result ([DFAProduction], [Maybe String])
+makeProductions :: [Rule] -> [Rule] -> TokenMap -> PrecMap -> Result ([DFAProduction])
 makeProductions [] _ _ _ = return ([], [])
 makeProductions (r:rs) rs' tm pm = do
-    (rest, ts') <- makeProductions rs rs' tm pm
+    rest <- makeProductions rs rs' tm pm
 
-    productions <- fmap concat $ mapM productionsFromRule $ ruleProductions r
+    productions <- mapM productionsFromRule $ ruleProductions r
 
-    return $ (productions ++ rest, (ruleResultType r):ts') -- TODO: this isnt correct, there will be more productions than result types
+    return $ productions ++ rest
   where
     productionsFromRule p = do
         tokens <- getTokens $ productionTokens p
@@ -189,12 +189,11 @@ makeProductions (r:rs) rs' tm pm = do
             Nothing -> findProdPrec tokens tm pm
             Just t -> fmap Just $ tokenToPrec t tm pm
 
-        return [DFAProduction (ruleName r) tokens (productionResult p) precM]
+        return $ DFAProduction (ruleName r) tokens (productionResult p) precM (ruleResultType p)
 
-    getTokens ts = do
-        mapM (\t -> case tokenType t of
-                        t'@(RuleTerminal s) -> indexHashMap tm s ("No such terminal: " ++ s) >> return t'
-                        t'@(RuleNonTerminal r) -> ruleNonTerminalCheck r rs') ts
+    getTokens ts = mapM (\t -> case tokenType t of
+                       t'@(RuleTerminal s) -> indexHashMap tm s ("No such terminal: " ++ s) >> return t'
+                       t'@(RuleNonTerminal r) -> ruleNonTerminalCheck r rs') ts
 
 findProdPrec :: [RuleTokenType] -> TokenMap -> PrecMap -> Result (Maybe Prec)
 findProdPrec ts tm pm = return $ (find isTerminal $ reverse ts) >>= (\(RuleTerminal t') -> pm^.at (tm ! t'))
