@@ -48,7 +48,7 @@ generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
            , generateStatesCode ss ps tm isDefined
            , generateReductions ps tm isDefined]
   where
-    (dataType, isDefined) = generateAbsSynDataType ps
+    (dataType, isDefined) = generateAbsSynDataType ps $ snd $ fromMaybe ("", "()") $ specParserMap scannerSpec
 
 generateModuleDef :: String -> Maybe String -> String
 generateModuleDef name mExports = unlines [
@@ -79,7 +79,7 @@ generateScannerCode spec = "gScanner = Scanner{ separateCasedIdentifiers=" ++ (s
                          "\n                  , lineComment=" ++ (show $ specLineComment spec) ++
                          "\n                  , blockComment=" ++ (show $ specBlockComment spec) ++
                          "\n                  , includeEOF=True" ++
-                         "\n                  , parserMap=" ++ (trim $ fromMaybe "id" $ specParserMap spec) ++
+                         "\n                  , parserMap=" ++ (trim $ fst $ fromMaybe ("id", "") $ specParserMap spec) ++
                          "\n                  }"
 
 -- Defines entrypoint, error point, and util unpack function
@@ -101,10 +101,9 @@ startCode = unlines [
 generateStatesList :: Int -> String
 generateStatesList n = "generatedStates = [" ++ intercalate ", " ["generatedState" ++ (show n') | n' <- [0..n - 1]] ++ "]"
 
--- TODO: the numbers here are wrong for reductions?
 -- Create the state output data type
-generateAbsSynDataType :: [DFAProduction] -> (String, Bool)
-generateAbsSynDataType ps = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken Token" ++ constructors, all isJust resultTypes)
+generateAbsSynDataType :: [DFAProduction] -> String -> (String, Bool)
+generateAbsSynDataType ps tokenType = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken (Token " ++ tokenType ++ ")" ++ constructors, all isJust resultTypes)
   where
     typeParams = (concat $ fmap (\(mt, n) -> if isJust mt then "" else " t" ++ n ) types)
     constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " (" ++ fromMaybe ('t':n) mt ++ ") ParseState") types

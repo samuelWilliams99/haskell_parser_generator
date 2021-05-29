@@ -47,7 +47,7 @@ ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | separateIden                               { ("sepiden", []) }
             | keepSpaces                                 { ("keepspace", []) }
             | keepComments                               { ("keepcmts", []) }
-            | parserMap codeBlock                        { ("parser", [v2]) }
+            | parserMap codeBlock codeBlock              { ("parser", [v2, v3]) }
                                                       => { (String, [String]) }
 
 TokenDefs :: token TokenMapping+                         { v2 }

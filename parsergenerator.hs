@@ -81,8 +81,8 @@ generateScannerSpec raw = generateScannerSpecAux raw scannerSpec
             ("block", (open:close:_)) -> case specBlockComment spec' of
                 Nothing   -> return $ spec'{ specBlockComment=Just (open, close) }
                 otherwise -> Error "Multiple block comment definitions"
-            ("parser", (code:_)) -> case specParserMap spec' of
-                Nothing   -> return $ spec'{ specParserMap=Just code }
+            ("parser", (code:codeType:_)) -> case specParserMap spec' of
+                Nothing   -> return $ spec'{ specParserMap=Just (code, codeType) }
                 otherwise -> Error "Multiple extra parser definitions"
 
 -- Parse, build scanner spec and DFA, then generate code.

@@ -105,7 +105,7 @@ data ScannerSpec = ScannerSpec
     , specKeywords :: [String]
     , specBlockComment :: Maybe (String, String)
     , specLineComment :: Maybe String
-    , specParserMap :: Maybe String
+    , specParserMap :: Maybe (String, String)
     } deriving Show
 
 -- | Default definition for a ScannerSpec, for easy modification via record updating
