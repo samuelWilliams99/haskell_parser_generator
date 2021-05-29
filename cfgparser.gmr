@@ -10,23 +10,23 @@ import Data.Maybe
 %parsermap { (languageDefsParser:) }
 
 %token
-      left          { TokenCustom "Directive" "left" }
-      right         { TokenCustom "Directive" "right" }
-      nonAssoc      { TokenCustom "Directive" "nonassoc" }
-      prec          { TokenCustom "Directive" "prec" }
-      token         { TokenCustom "Directive" "token" }
-      export        { TokenCustom "Directive" "export" }
-      precode       { TokenCustom "Directive" "precode" }
-      operators     { TokenCustom "Directive" "operators" }
-      keywords      { TokenCustom "Directive" "keywords" }
-      lineComments  { TokenCustom "Directive" "linecomments" }
-      blockComments { TokenCustom "Directive" "blockcomments" }
-      separateIden  { TokenCustom "Directive" "separateidentitycase" }
-      keepSpaces    { TokenCustom "Directive" "keepwhitespaces" }
-      keepComments  { TokenCustom "Directive" "keepcomments" }
-      parserMap     { TokenCustom "Directive" "parsermap" }
-      empty         { TokenCustom "Directive" "empty" }
-      codeBlock     { TokenCustom "CodeBlock" $$ } => { String }
+      left          { TokenCustom (TokenDirective "left") }
+      right         { TokenCustom (TokenDirective "right") }
+      nonAssoc      { TokenCustom (TokenDirective "nonassoc") }
+      prec          { TokenCustom (TokenDirective "prec") }
+      token         { TokenCustom (TokenDirective "token") }
+      export        { TokenCustom (TokenDirective "export") }
+      precode       { TokenCustom (TokenDirective "precode") }
+      operators     { TokenCustom (TokenDirective "operators") }
+      keywords      { TokenCustom (TokenDirective "keywords") }
+      lineComments  { TokenCustom (TokenDirective "linecomments") }
+      blockComments { TokenCustom (TokenDirective "blockcomments") }
+      separateIden  { TokenCustom (TokenDirective "separateidentitycase") }
+      keepSpaces    { TokenCustom (TokenDirective "keepwhitespaces") }
+      keepComments  { TokenCustom (TokenDirective "keepcomments") }
+      parserMap     { TokenCustom (TokenDirective "parsermap") }
+      empty         { TokenCustom (TokenDirective "empty") }
+      codeBlock     { TokenCustom (TokenCodeBlock $$) } => { String }
 
 FullDef :: Export? PreCode? ScannerDef* Grammar          { (v1, fromMaybe "" v2, v3, v4) }
                                                       => { (Maybe String, String, [(String, [String])], Grammar) }
@@ -47,7 +47,7 @@ ScannerDef :: operators stringLit+                       { ("ops", v2) }
             | separateIden                               { ("sepiden", []) }
             | keepSpaces                                 { ("keepspace", []) }
             | keepComments                               { ("keepcmts", []) }
-            | parserMap codeBlock codeBlock              { ("parser", [v2, v3]) }
+            | parserMap codeBlock                        { ("parser", [v2]) }
                                                       => { (String, [String]) }
 
 TokenDefs :: token TokenMapping+                         { v2 }

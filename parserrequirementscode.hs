@@ -94,7 +94,7 @@ parserRequirements = unlines [
         "scanParser,",
         "scan,",
         "-- * Language definition parsers",
-        "LanguageDefs,",
+        "LanguageDefs (..),",
         "codeBlock,",
         "directive,",
         "identifierPrime,",
