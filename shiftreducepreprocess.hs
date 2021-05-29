@@ -25,26 +25,27 @@ import Data.List hiding (insert)
 import Data.List.Split
 import Control.Lens
 
+type TypeMap = HashMap String (Maybe String)
+
 -- handleRuleModifiers on each rule, concat results
 -- | Converts all token modifiers to extra rules, giving a modifier-less grammar.
-handleModifiers :: Grammar -> Grammar
-handleModifiers gmr = gmr{ rules=nub $ concat newRules }
+handleModifiers :: TokenMap -> Grammar -> Grammar
+handleModifiers tm gmr = gmr{ rules=nub $ concat newRules }
   where
     typeMap = fromList $ fmap (\r -> (ruleName r, ruleResultType r)) $ rules gmr
-    newRules = Prelude.map (handleRuleModifiers typeMap) $ rules gmr
+    newRules = Prelude.map (handleRuleModifiers typeMap tm) $ rules gmr
 
 -- Call handleProductionModifiers on each production of a rule
-handleRuleModifiers :: HashMap String (Maybe String) -> Rule -> [Rule]
-handleRuleModifiers typeMap rule = (rule{ ruleProductions=concat prods }):(concat newRules)
--- TODO: Do something with typeMap, need to be able to derive the types of generated productions
+handleRuleModifiers :: TypeMap -> TokenMap -> Rule -> [Rule]
+handleRuleModifiers typeMap tm rule = (rule{ ruleProductions=concat prods }):(concat newRules)
   where
-    prodRulePairs = Prelude.map handleProductionModifiers $ ruleProductions rule
+    prodRulePairs = Prelude.map (handleProductionModifiers typeMap tm) $ ruleProductions rule
     (prods, newRules) = unzip prodRulePairs
 
 -- Rule builders for token modifiers
 
-makeSomeRule :: RuleToken -> Maybe RuleTokenType -> Rule
-makeSomeRule token@(RuleToken tType _) sep = Rule{
+makeSomeRule :: TypeMap -> TokenMap -> RuleToken -> Maybe RuleTokenType -> Rule
+makeSomeRule typeMap tm token@(RuleToken tType _) sep = Rule{
     ruleName=someRuleName,
     ruleProductions=[
         RuleProduction{
@@ -62,15 +63,15 @@ makeSomeRule token@(RuleToken tType _) sep = Rule{
             productionPrecToken=Nothing
         }
     ],
-    ruleResultType=Nothing
+    ruleResultType=mapResultType False typeMap tm token
     }
   where
     someRuleName = concat ["+", getSepStr sep, tokenName]
     tokenName = getTokenStr token
     normalToken = RuleToken tType RuleTokenModifierNormal
 
-makeJustRule :: RuleToken -> Rule
-makeJustRule token@(RuleToken tType _) = Rule{
+makeJustRule :: TypeMap -> TokenMap -> RuleToken -> Rule
+makeJustRule typeMap tm token@(RuleToken tType _) = Rule{
     ruleName='?':tokenName,
     ruleProductions=[
         RuleProduction{
@@ -81,14 +82,14 @@ makeJustRule token@(RuleToken tType _) = Rule{
             productionPrecToken=Nothing
         }
     ],
-    ruleResultType=Nothing
+    ruleResultType=mapResultType True typeMap tm token
     }
   where
     tokenName = getTokenStr token
     normalToken = RuleToken tType RuleTokenModifierNormal
 
-makeEmptyRule :: RuleToken -> Rule
-makeEmptyRule token = Rule{
+makeEmptyRule :: TypeMap -> TokenMap -> Bool -> RuleToken -> Rule
+makeEmptyRule typeMap tm isMaybe token = Rule{
     ruleName='-':tokenName,
     ruleProductions=[
         RuleProduction{
@@ -97,7 +98,7 @@ makeEmptyRule token = Rule{
             productionPrecToken=Nothing
         }
     ],
-    ruleResultType=Nothing
+    ruleResultType=mapResultType isMaybe typeMap tm token
     }
   where
     tokenName = getTokenStr token
@@ -106,17 +107,29 @@ getSepStr :: Maybe RuleTokenType -> String
 getSepStr Nothing = ""
 getSepStr (Just x) = "(" ++ getTokenTypeStr x ++ ")"
 
+mapResultType :: Bool -> TypeMap -> TokenMap -> RuleToken -> Maybe String
+mapResultType True typeMap tm = fmap (\t -> "Maybe (" ++ t ++ ")") . getResultType typeMap tm
+mapResultType False typeMap tm = fmap (\t -> "[" ++ t ++ "]") . getResultType typeMap tm
+
+getResultType :: TypeMap -> TokenMap -> RuleToken -> Maybe String
+getResultType _ tm (RuleToken (RuleTerminal t) _) = tokenPatternType $ tm ! t
+getResultType typeMap _ (RuleToken (RuleNonTerminal r) _) = typeMap ! r
+
 -- Recurse over tokens of a production, modifying said rules productions and the global rule list as needed
-handleProductionModifiers :: RuleProduction -> ([RuleProduction], [Rule])
-handleProductionModifiers prod@(RuleProduction [] _ _) = ([prod], [])
-handleProductionModifiers prod@(RuleProduction (x:xs) _ _) =
+handleProductionModifiers :: TypeMap -> TokenMap -> RuleProduction -> ([RuleProduction], [Rule])
+handleProductionModifiers _ _ prod@(RuleProduction [] _ _) = ([prod], [])
+handleProductionModifiers typeMap tm prod@(RuleProduction (x:xs) _ _) =
     case tokenModifier x of
         RuleTokenModifierNormal -> ( conToken x newProds, newRules )
-        RuleTokenModifierSome sep -> ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds, (makeSomeRule x sep):newRules )
-        RuleTokenModifierMany sep -> ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds ++ prodsPrefixNonTerminal "-" newProds, (makeEmptyRule x):(makeSomeRule x sep):newRules )
-        RuleTokenModifierOptional -> ( prodsPrefixNonTerminal "?" newProds ++ prodsPrefixNonTerminal "-" newProds, (makeEmptyRule x):(makeJustRule x):newRules )
+        RuleTokenModifierSome sep -> ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds, (makeSomeRule typeMap tm x sep):newRules )
+        RuleTokenModifierMany sep -> 
+            ( prodsPrefixNonTerminal ("+" ++ getSepStr sep) newProds ++ prodsPrefixNonTerminal "-" newProds
+            , (makeEmptyRule typeMap tm False x):(makeSomeRule typeMap tm x sep):newRules )
+        RuleTokenModifierOptional ->
+            ( prodsPrefixNonTerminal "?" newProds ++ prodsPrefixNonTerminal "-" newProds
+            , (makeEmptyRule typeMap tm True x):(makeJustRule typeMap tm x):newRules )
   where
-    ( newProds, newRules ) = handleProductionModifiers $ prod{ productionTokens=xs }
+    ( newProds, newRules ) = handleProductionModifiers typeMap tm $ prod{ productionTokens=xs }
     conToken x prods = Prelude.map (\prod' -> prod'{ productionTokens=x:(productionTokens prod') }) prods
     prodsPrefixNonTerminal c prods = conToken (nonTerminalToken $ c ++ (getTokenStr x)) prods
 
@@ -130,10 +143,14 @@ makeTokenMap (t:ts) = do
 
     if member (tokenName t) rest then
         Error $ "Multiple defintions of token " ++ tokenName t
-    else if (length $ splitOn "$$" $ tokenPattern t) > 2 then
-        Error $ "More than one $$ definition in token " ++ tokenName t
-    else
-        return $ insert (tokenName t) t rest
+    else do 
+        let wildcardCount = length $ splitOn "$$" $ tokenPattern t
+        if wildcardCount > 2 then
+            Error $ "More than one $$ definition in token " ++ tokenName t
+        else if wildcardCount == 1 then
+            return $ insert (tokenName t) t rest
+        else do
+            return $ insert (tokenName t) t{tokenPatternType=Just $ fromMaybe "TokenType" $ tokenPatternType t} rest
 
 indexHashMap :: (Eq a, Hashable a) => HashMap a b -> a -> String -> Result b
 indexHashMap hm k err = case hm^.at k of
@@ -174,7 +191,7 @@ ruleNonTerminalCheck r rs = do
 
 -- | Converts rules into a list of @DFAProduction@s, checking all tokens within the rule are valid, and assigning the correct precedences.
 makeProductions :: [Rule] -> [Rule] -> TokenMap -> PrecMap -> Result ([DFAProduction])
-makeProductions [] _ _ _ = return ([], [])
+makeProductions [] _ _ _ = return []
 makeProductions (r:rs) rs' tm pm = do
     rest <- makeProductions rs rs' tm pm
 
@@ -189,7 +206,7 @@ makeProductions (r:rs) rs' tm pm = do
             Nothing -> findProdPrec tokens tm pm
             Just t -> fmap Just $ tokenToPrec t tm pm
 
-        return $ DFAProduction (ruleName r) tokens (productionResult p) precM (ruleResultType p)
+        return $ DFAProduction (ruleName r) tokens (productionResult p) precM (ruleResultType r)
 
     getTokens ts = mapM (\t -> case tokenType t of
                        t'@(RuleTerminal s) -> indexHashMap tm s ("No such terminal: " ++ s) >> return t'

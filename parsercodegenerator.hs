@@ -19,6 +19,7 @@ import Data.Maybe
 import Data.List.Split
 import Data.HashMap.Strict as Map hiding (map, filter)
 import Control.Lens
+import Data.Function
 
 reindent :: Int -> String -> String
 reindent n str = intercalate "\n" $ map (\line -> (replicate n ' ') ++ (drop minIndent line)) strLines
@@ -43,9 +44,11 @@ generateCode name exports preCode scannerSpec (DFA ss ps tm _ fm) =
            , generateScannerCode scannerSpec, "\n\n"
            , startCode, "\n\n"
            , generateStatesList $ length ss, "\n\n"
-           , generateAbsSynDataType ps, "\n\n"
-           , generateStatesCode ss ps tm
-           , generateReductions ps tm]
+           , dataType, "\n\n"
+           , generateStatesCode ss ps tm isDefined
+           , generateReductions ps tm isDefined]
+  where
+    (dataType, isDefined) = generateAbsSynDataType ps
 
 generateModuleDef :: String -> Maybe String -> String
 generateModuleDef name mExports = unlines [
@@ -99,29 +102,30 @@ generateStatesList :: Int -> String
 generateStatesList n = "generatedStates = [" ++ intercalate ", " ["generatedState" ++ (show n') | n' <- [0..n - 1]] ++ "]"
 
 -- Create the state output data type
-generateAbsSynDataType :: [DFAProduction] -> String
-generateAbsSynDataType ps = "data AbsSynToken" ++ typeParams ++ " = AbsSynToken Token" ++ constructors
+generateAbsSynDataType :: [DFAProduction] -> (String, Bool)
+generateAbsSynDataType ps = ("data AbsSynToken" ++ typeParams ++ " = AbsSynToken Token" ++ constructors, all isJust resultTypes)
   where
     typeParams = (concat $ fmap (\(mt, n) -> if isJust mt then "" else " t" ++ n ) types)
     constructors = concat $ fmap (\(mt, n) -> " | AbsSynResult" ++ n ++ " " ++ fromMaybe ('t':n) mt ++ " ParseState") types
-    uniqueProds = nubBy (equating _dfaProductionName) ps
-    resultTypes = fmap (trim . dfaProductionResultType) uniqueProds
+    uniqueProds = nubBy (on (==) _dfaProductionName) ps
+    resultTypes = fmap ((fmap trim) . _dfaProductionResultType) uniqueProds
     types = zip resultTypes $ fmap show [1..]
 
 -- Call and concat generateStateCode on each state, retaining index
-generateStatesCode :: [DFAState] -> [DFAProduction] -> TokenMap -> String
-generateStatesCode ss' ps tm = aux ss' 0
+generateStatesCode :: [DFAState] -> [DFAProduction] -> TokenMap -> Bool -> String
+generateStatesCode ss' ps tm isDefined = aux ss' 0
   where
     aux [] n = ""
-    aux (s:ss) n = generateStateCode s n ps tm ++ "\n\n\n" ++ (aux ss $ n + 1)
+    aux (s:ss) n = generateStateCode s n ps tm isDefined ++ "\n\n\n" ++ (aux ss $ n + 1)
 
 -- Generate each state function
-generateStateCode :: DFAState -> Int -> [DFAProduction] -> TokenMap -> String
-generateStateCode (DFAState _ as' ) n ps tm = aux as'
+generateStateCode :: DFAState -> Int -> [DFAProduction] -> TokenMap -> Bool -> String
+generateStateCode (DFAState _ as' ) n ps tm isDefined = (if isDefined then stateType else "") ++ aux as'
   where
-    -- generatedStateX :: ParseState -> [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken
-    aux [] = "generatedState" ++ (show n) ++ " _ _ _ xs = generatedError " ++ show n ++ " xs"
-    aux ((t, a):as) = "generatedState" ++ (show n) ++ " ps0 vs ss (x@" ++ pattern ++ ":xs) = "
+    stateType = stateName ++ " :: ParseState -> [AbsSynToken] -> [Int] -> [AbsSynToken] -> Result AbsSynToken\n"
+    stateName = "generatedState" ++ show n
+    aux [] = stateName ++ (show n) ++ " _ _ _ xs = generatedError " ++ show n ++ " xs"
+    aux ((t, a):as) = stateName ++ " ps0 vs ss (x@" ++ pattern ++ ":xs) = "
         ++ generateStateAction n a ps parseState ++ "\n"
         ++ aux as
       where
@@ -151,15 +155,18 @@ getProdIndex :: String -> [DFAProduction] -> Int
 getProdIndex s ps = fromJust $ findIndex (==s) $ getNonTerminals ps
 
 -- Call and concat generateReductions on each production, retaining index
-generateReductions :: [DFAProduction] -> TokenMap -> String
-generateReductions ps tm = concat [(generateReduction v ps tm) ++ "\n\n" | v <- [1..length ps - 1] ]
+generateReductions :: [DFAProduction] -> TokenMap -> Bool -> String
+generateReductions ps tm isDefined = concat [(generateReduction v ps tm isDefined) ++ "\n\n" | v <- [1..length ps - 1] ]
 
 -- Pattern match expected tokens for reduction, call result code from gmr file, pack result in correct AbsSynToken constructor
-generateReduction :: Int -> [DFAProduction] -> TokenMap -> String
-generateReduction i ps tm = "generatedReduction" ++ (show i) ++ " ps0 " ++ vPattern ++
+generateReduction :: Int -> [DFAProduction] -> TokenMap -> Bool -> String
+generateReduction i ps tm isDefined = (if isDefined then reductionType else "") ++
+    reductionName ++ " ps0 " ++ vPattern ++
     " = AbsSynResult" ++ (show $ getProdIndex (p^.dfaProductionName) ps) ++
     " (" ++ (p^.dfaProductionResult.to trim) ++ ") ps" ++ if count == 0 then "0" else "1"
   where
+    reductionName = "generatedReduction" ++ (show i)
+    reductionType = reductionName ++ " :: ParseState -> [AbsSynToken] -> AbsSynToken\n"
     p = ps !! i
     prodTokens = p^.dfaProductionTokens
     count = length prodTokens

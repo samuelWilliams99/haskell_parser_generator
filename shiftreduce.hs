@@ -36,19 +36,16 @@ deleteAt _ []     = []
 
 -- | Converts a @Grammar@ from "Grammar" to a @DFA@, calling functions exported from "ShiftReducePreProcess"
 generateDFA :: Grammar -> Result DFA
-generateDFA g = do
-    let (Grammar ts ps rs) = handleModifiers g
+generateDFA g@(Grammar ts _ _) = do
     tokenMap <- makeTokenMap ts
+    let (Grammar _ ps rs) = handleModifiers tokenMap g
     precMap <- makePrecMap ps tokenMap
     prods <- makeProductions rs rs tokenMap precMap
 
-    let headProd = prods^._head
-    let newFirst = DFAProduction
-        "START"
-        [RuleNonTerminal $ headProd^.dfaProductionName, RuleTerminal "%EOF"]
-        ""
-        Nothing
-        (headProd^.dfaProductionResultType)
+    let headProd = head prods
+    let headProdName = headProd^.dfaProductionName
+    let headProdResultType = headProd^.dfaProductionResultType
+    let newFirst = DFAProduction "START" [RuleNonTerminal headProdName, RuleTerminal "%EOF"] "" Nothing headProdResultType
     let prods' = newFirst:prods
 
     let followMap = makeFollowMap prods' tokenMap
