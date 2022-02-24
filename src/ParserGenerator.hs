@@ -17,13 +17,13 @@ import System.IO
 import System.Directory
 import System.Environment
 import System.FilePath.Posix
-import Cfgparser
-import Grammar
-import ShiftReduce
-import DFA
-import ParserCodeGenerator
-import ParserRequirementsCode
-import ParserRequirements
+import ParserGenerator.Cfgparser
+import ParserGenerator.Grammar
+import ParserGenerator.ShiftReduce
+import ParserGenerator.DFA
+import ParserGenerator.ParserCodeGenerator
+import ParserGenerator.ParserRequirementsCode
+import ParserGenerator.ParserRequirements
 import Data.HashMap.Strict as Map
 import Data.Char
 import Data.Maybe

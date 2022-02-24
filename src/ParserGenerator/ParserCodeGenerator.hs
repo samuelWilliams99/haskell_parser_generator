@@ -8,11 +8,11 @@ Stability   : release
 
 Code generator for the parser, all validity checks have already passed at this point, thus the single function in this module cannot fail
 -}
-module ParserCodeGenerator (generateCode) where
+module ParserGenerator.ParserCodeGenerator (generateCode) where
 
-import DFA
-import Grammar
-import ShiftReduce
+import ParserGenerator.DFA
+import ParserGenerator.Grammar
+import ParserGenerator.ShiftReduce
 import Data.Char
 import Data.List
 import Data.Maybe

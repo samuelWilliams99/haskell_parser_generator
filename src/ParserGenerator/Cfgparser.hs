@@ -2,12 +2,12 @@
 Module      : Cfgparser
 Description : Parser generated with the Haskell Parser Generator - https://github.com/samuelWilliams99/haskell_parser_generator
 -}
-module Cfgparser (runParser, module ParserRequirements) where
+module ParserGenerator.Cfgparser (runParser, module ParserGenerator.ParserRequirements) where
 
 
-import ParserRequirements
+import ParserGenerator.ParserRequirements
 import Control.Applicative
-import Grammar
+import ParserGenerator.Grammar
 import Data.Maybe
 wrapCustom :: TokenDef -> TokenDef
 wrapCustom t = t{tokenPattern="TokenCustom (" ++ tokenPattern t ++ ")"}

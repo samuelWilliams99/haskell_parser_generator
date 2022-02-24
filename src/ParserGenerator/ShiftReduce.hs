@@ -10,12 +10,12 @@ Uses the Shift-Reduce algorithm to build a @DFA@ from the "DFA" module.
 Shift-Reduce conflicts are automatically resolved if sufficient precedence data has been supplied, otherwise an error is thrown.
 Similarly, Reduce-Reduce conflicts will cause the algorithm to fail.
 -}
-module ShiftReduce (module ShiftReducePreProcess, generateDFA) where
+module ParserGenerator.ShiftReduce (module ParserGenerator.ShiftReducePreProcess, generateDFA) where
 
-import DFA
-import Grammar
-import ParserRequirements
-import ShiftReducePreProcess
+import ParserGenerator.DFA
+import ParserGenerator.Grammar
+import ParserGenerator.ParserRequirements
+import ParserGenerator.ShiftReducePreProcess
 import Data.HashMap.Strict as Map hiding (foldr, filter)
 import Data.Maybe
 import Data.List hiding (insert)

@@ -1,5 +1,5 @@
 %precode {
-import Grammar
+import CompilerGenerator.Grammar
 import Data.Maybe
 
 wrapCustom :: TokenDef -> TokenDef

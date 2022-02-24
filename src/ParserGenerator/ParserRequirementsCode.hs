@@ -6,7 +6,7 @@ License     : GPL-3
 Maintainer  : samuel.will1999@gmail.com
 Stability   : release
 -}
-module ParserRequirementsCode where
+module ParserGenerator.ParserRequirementsCode where
 
 -- | "ParserRequirements" module as a string
 parserRequirements :: String

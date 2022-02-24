@@ -11,9 +11,9 @@ The DFA holds a list of @DFAStates@, each of which hold links to other states on
 These states also hold information about the productions they correspond to, but only by index in the @DFAProduction@ list.
 Various other @HashMap@s are also stored within the DFA to keep the structure fully self referencial and standalone.
 -}
-module DFA where
+module ParserGenerator.DFA where
 
-import Grammar
+import ParserGenerator.Grammar
 import Data.HashMap.Strict
 import Control.Lens
 

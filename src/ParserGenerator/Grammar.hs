@@ -9,7 +9,7 @@ Stability   : release
 This module holds the @Grammar@ data structure definition, used for generating the "DFA" structure, as well as various various getters for that structure.
 It also holds the @ScannerSpec@ structure, which is an abstraction of "Scanner" used for generating the "Scanner" instance code.
 -}
-module Grammar where
+module ParserGenerator.Grammar where
 
 import Data.HashMap.Strict hiding (map)
 import Data.Hashable

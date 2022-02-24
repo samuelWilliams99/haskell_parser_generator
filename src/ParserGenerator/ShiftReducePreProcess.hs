@@ -8,20 +8,20 @@ Stability   : release
 
 Handles changing modifiers to simple rules, building the various @HashMap@s needed, and ensuring the Grammar is semantically well formed.
 -}
-module ShiftReducePreProcess ( handleModifiers
+module ParserGenerator.ShiftReducePreProcess ( handleModifiers
                              , makeTokenMap
                              , makePrecMap
                              , makeProductions
                              , makeFollowMap
                              , getNonTerminals ) where
 
-import DFA
-import Grammar
-import ParserRequirements
+import ParserGenerator.DFA
+import ParserGenerator.Grammar
+import ParserGenerator.ParserRequirements
 import Data.HashMap.Strict as Map hiding (foldr, filter)
 import Data.Hashable
 import Data.Maybe
-import Data.List hiding (insert)
+import Data.List hiding (insert, singleton)
 import Data.List.Split
 import Control.Lens
 
